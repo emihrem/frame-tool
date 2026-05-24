@@ -1,0 +1,28 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] — 2026-05-24
+
+First public release.
+
+### Added
+
+- **Core framing**: per-side white/black borders (`--top / --bottom / --left / --right`) applied to JPGs while preserving original JPEG quality and EXIF (`quality="keep"`, `subsampling="keep"`).
+- **EXIF overlay**: aperture, shutter speed, ISO, focal length, and camera model rendered onto the border in six positions (`bottom-center`, `bottom-left`, `bottom-right`, `top-*`).
+- **Three bundled typefaces** under SIL OFL 1.1 — Montserrat (default), Inter, Lora — so output looks the same on every OS.
+- **Instagram-friendly export**: pad framed images to 1:1, 4:5, 1.91:1 or 9:16 (or `auto` per image orientation) so Instagram doesn't crop the composition. Optional `--instagram-size 1080` downscales the long edge to the exact IG canvas; without it, full resolution is preserved.
+- **GUI** built with PySide6: dark theme, three-pane layout, live preview that updates as you tweak controls, font dropdown with each typeface previewed in its own style.
+- **CLI** with Typer: `frame-tool process <folder>` for batch jobs, `frame-tool` (no args) launches the GUI.
+- **PyInstaller bundling**: `pyinstaller packaging/frame_tool.spec` produces a standalone `frame_tool.app` on macOS and an executable folder on Windows / Linux — end users don't need Python.
+
+### Engineering
+
+- 97 tests (unit + integration + GUI smoke) at ~82% coverage.
+- Ruff for lint + format, Mypy for type checking, both clean.
+- GitHub Actions CI matrix: Linux / macOS / Windows × Python 3.11 / 3.12.
+- Codecov uploads, pre-commit hooks for ruff and mypy.
+
+[0.2.0]: https://github.com/emihrem/frame-tool/releases/tag/v0.2.0
