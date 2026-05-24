@@ -1,3 +1,4 @@
+from importlib.resources import files
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,7 @@ from frame_tool.models import (
     BorderColor,
     BorderConfig,
     ExifData,
+    FontFamily,
     FrameJob,
     MetadataConfig,
     MetadataPosition,
@@ -63,6 +65,7 @@ class TestMetadataConfig:
         cfg = MetadataConfig()
         assert cfg.enabled is True
         assert cfg.position is MetadataPosition.BOTTOM_CENTER
+        assert cfg.font is FontFamily.MONTSERRAT
         assert cfg.show_aperture and cfg.show_shutter_speed and cfg.show_iso
         assert not cfg.show_focal_length and not cfg.show_camera_model
 
@@ -71,6 +74,25 @@ class TestMetadataConfig:
             MetadataConfig(font_size=4)
         with pytest.raises(ValidationError):
             MetadataConfig(font_size=1000)
+
+
+class TestFontFamily:
+    @pytest.mark.parametrize(
+        ("family", "display", "filename"),
+        [
+            (FontFamily.MONTSERRAT, "Montserrat", "Montserrat-Regular.ttf"),
+            (FontFamily.INTER, "Inter", "Inter-Regular.ttf"),
+            (FontFamily.LORA, "Lora", "Lora-Regular.ttf"),
+        ],
+    )
+    def test_display_and_filename(self, family: FontFamily, display: str, filename: str) -> None:
+        assert family.display_name == display
+        assert family.filename == filename
+
+    def test_assets_exist(self) -> None:
+        for family in FontFamily:
+            asset = files("frame_tool").joinpath(f"assets/fonts/{family.filename}")
+            assert asset.is_file(), f"Missing bundled font: {family.filename}"
 
 
 class TestExifData:

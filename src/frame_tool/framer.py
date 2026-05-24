@@ -9,18 +9,21 @@ from frame_tool.models import (
     BorderColor,
     BorderConfig,
     ExifData,
+    FontFamily,
     InstagramConfig,
     InstagramPreset,
     MetadataConfig,
     MetadataPosition,
 )
 
-_FONT_RESOURCE = files("frame_tool").joinpath("assets/fonts/Inter-Regular.ttf")
+_FONTS_DIR = files("frame_tool").joinpath("assets/fonts")
 
 
-def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def _load_font(
+    size: int, family: FontFamily = FontFamily.MONTSERRAT
+) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     try:
-        with _FONT_RESOURCE.open("rb") as fh:
+        with _FONTS_DIR.joinpath(family.filename).open("rb") as fh:
             data = fh.read()
         return ImageFont.truetype(BytesIO(data), size=size)
     except (FileNotFoundError, OSError):
@@ -56,7 +59,7 @@ def _draw_metadata(
     text = exif.format(metadata)
     if not text:
         return
-    font = _load_font(metadata.font_size)
+    font = _load_font(metadata.font_size, metadata.font)
     draw = ImageDraw.Draw(canvas)
     xy, anchor = _text_anchor_xy(metadata.position, canvas.size, border, metadata.margin)
     draw.text(xy, text, font=font, fill=border.color.contrast_rgb, anchor=anchor)

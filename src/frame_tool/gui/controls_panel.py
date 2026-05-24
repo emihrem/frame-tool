@@ -1,4 +1,7 @@
-from PySide6.QtCore import Qt, Signal
+from PIL import Image, ImageDraw
+from PIL.ImageQt import ImageQt
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -14,9 +17,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from frame_tool.framer import _load_font
 from frame_tool.models import (
     BorderColor,
     BorderConfig,
+    FontFamily,
     InstagramConfig,
     InstagramPreset,
     MetadataConfig,
@@ -40,6 +45,19 @@ _INSTAGRAM_LABELS: dict[InstagramPreset, str] = {
     InstagramPreset.LANDSCAPE: "Landscape · 1.91:1",
     InstagramPreset.STORY: "Story / Reel · 9:16",
 }
+
+
+def _render_font_preview(family: FontFamily, *, size: int = 22) -> QPixmap:
+    """Render the font's display name in the font itself, as a small QPixmap.
+
+    Used as the QComboBox item icon so the user can compare typefaces visually.
+    """
+    width, height = 200, 32
+    canvas = Image.new("RGBA", (width, height), (15, 15, 15, 0))
+    draw = ImageDraw.Draw(canvas)
+    font = _load_font(size, family)
+    draw.text((6, height // 2), family.display_name, font=font, fill=(230, 230, 230), anchor="lm")
+    return QPixmap.fromImage(ImageQt(canvas))
 
 
 class _SliderField(QWidget):
@@ -170,6 +188,18 @@ class ControlsPanel(QScrollArea):
         position_row.addWidget(self._position, stretch=1)
         layout.addLayout(position_row)
 
+        font_row = QHBoxLayout()
+        font_row.setSpacing(10)
+        font_row.addWidget(QLabel("Font"))
+        self._font = QComboBox()
+        self._font.setIconSize(QSize(180, 28))
+        for family in FontFamily:
+            self._font.addItem(QIcon(_render_font_preview(family)), family.display_name, family)
+        self._font.setCurrentIndex(list(FontFamily).index(self._metadata.font))
+        self._font.currentIndexChanged.connect(self._sync)
+        font_row.addWidget(self._font, stretch=1)
+        layout.addLayout(font_row)
+
         self._font_size = _SliderField("Size", 8, 200, self._metadata.font_size)
         self._font_size.valueChanged.connect(self._sync)
         layout.addWidget(self._font_size)
@@ -239,6 +269,7 @@ class ControlsPanel(QScrollArea):
         self._metadata = MetadataConfig(
             enabled=self._enabled.isChecked(),
             position=self._position.currentData(),
+            font=self._font.currentData(),
             font_size=self._font_size.value(),
             margin=self._metadata.margin,
             show_aperture=self._aperture.isChecked(),

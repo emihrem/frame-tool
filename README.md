@@ -22,7 +22,7 @@ Built for photographers who edit in Lightroom and want a simple post-export step
 ## Features
 
 - Independent border per side (top, bottom, left, right), white or black.
-- Optional EXIF overlay with configurable position, size, and fields (f-stop, shutter, ISO, focal length, camera).
+- Optional EXIF overlay with configurable position, font family (Montserrat / Inter / Lora), size, and fields (f-stop, shutter, ISO, focal length, camera).
 - **Instagram-friendly export**: pad to 1:1, 4:5, 1.91:1, or 9:16 so IG doesn't crop your composition (or `auto` per orientation).
 - Live preview as you tweak settings.
 - Batch export an entire folder with one click (or one CLI command).
@@ -89,6 +89,7 @@ Flags:
 | `--top / --bottom / --left / --right` | `50 / 200 / 50 / 50` | Border in px |
 | `--color` | `white` | `white` or `black` |
 | `--metadata-position` | `bottom-center` | `bottom-center`, `bottom-left`, `bottom-right`, `top-center`, `top-left`, `top-right` |
+| `--font` | `montserrat` | `montserrat`, `inter`, `lora` |
 | `--font-size` | `36` | Metadata font size in px |
 | `--no-metadata` | off | Disable text overlay entirely |
 | `--no-aperture / --no-shutter / --no-iso` | shown | Hide a field |
@@ -162,4 +163,10 @@ pytest --cov          # tests + coverage
 
 ## License
 
-MIT. Bundled font: [Inter](https://github.com/rsms/inter) by Rasmus Andersson, SIL Open Font License 1.1 (see `src/frame_tool/assets/fonts/Inter-LICENSE.txt`).
+MIT. Bundled fonts (all under SIL Open Font License 1.1):
+
+- [Montserrat](https://github.com/JulietaUla/Montserrat) by Julieta Ulanovsky
+- [Inter](https://github.com/rsms/inter) by Rasmus Andersson
+- [Lora](https://github.com/cyrealtype/Lora-Cyrillic) by Cyreal
+
+License files live next to each font in `src/frame_tool/assets/fonts/`.

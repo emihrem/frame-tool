@@ -8,6 +8,7 @@ from frame_tool.batch import process_folder
 from frame_tool.models import (
     BorderColor,
     BorderConfig,
+    FontFamily,
     FrameJob,
     InstagramConfig,
     InstagramPreset,
@@ -54,6 +55,9 @@ def process(
         MetadataPosition,
         typer.Option("--metadata-position", help="Where to render EXIF metadata."),
     ] = MetadataPosition.BOTTOM_CENTER,
+    font: Annotated[
+        FontFamily, typer.Option(help="Font family for metadata text.")
+    ] = FontFamily.MONTSERRAT,
     font_size: Annotated[int, typer.Option(help="Metadata font size in pixels.")] = 36,
     no_metadata: Annotated[
         bool, typer.Option("--no-metadata", help="Disable metadata overlay.")
@@ -94,6 +98,7 @@ def process(
         metadata=MetadataConfig(
             enabled=not no_metadata,
             position=metadata_position,
+            font=font,
             font_size=font_size,
             show_aperture=not no_aperture,
             show_shutter_speed=not no_shutter,

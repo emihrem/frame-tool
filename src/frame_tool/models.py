@@ -79,6 +79,30 @@ class MetadataPosition(StrEnum):
     TOP_RIGHT = "top-right"
 
 
+class FontFamily(StrEnum):
+    """Bundled font families used for the EXIF overlay."""
+
+    MONTSERRAT = "montserrat"
+    INTER = "inter"
+    LORA = "lora"
+
+    @property
+    def display_name(self) -> str:
+        return {
+            FontFamily.MONTSERRAT: "Montserrat",
+            FontFamily.INTER: "Inter",
+            FontFamily.LORA: "Lora",
+        }[self]
+
+    @property
+    def filename(self) -> str:
+        return {
+            FontFamily.MONTSERRAT: "Montserrat-Regular.ttf",
+            FontFamily.INTER: "Inter-Regular.ttf",
+            FontFamily.LORA: "Lora-Regular.ttf",
+        }[self]
+
+
 class BorderConfig(BaseModel):
     top: int = Field(default=50, ge=0, le=2000)
     bottom: int = Field(default=200, ge=0, le=2000)
@@ -99,6 +123,7 @@ class BorderConfig(BaseModel):
 class MetadataConfig(BaseModel):
     enabled: bool = True
     position: MetadataPosition = MetadataPosition.BOTTOM_CENTER
+    font: FontFamily = FontFamily.MONTSERRAT
     font_size: int = Field(default=36, ge=8, le=400)
     margin: int = Field(default=24, ge=0, le=500)
     show_aperture: bool = True
