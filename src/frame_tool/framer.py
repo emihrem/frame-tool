@@ -15,6 +15,8 @@ from frame_tool.models import (
     InstagramPreset,
     MetadataConfig,
     MetadataPosition,
+    WatermarkConfig,
+    WatermarkPosition,
 )
 
 _FONTS_DIR = files("frame_tool").joinpath("assets/fonts")
@@ -79,6 +81,44 @@ def _draw_caption(
     draw.text(xy, caption.text, font=font, fill=contrast_for(border.color), anchor=anchor)
 
 
+def _watermark_xy(
+    position: WatermarkPosition,
+    canvas_size: tuple[int, int],
+    logo_size: tuple[int, int],
+    margin: int,
+) -> tuple[int, int]:
+    cw, ch = canvas_size
+    lw, lh = logo_size
+    if position is WatermarkPosition.BOTTOM_RIGHT:
+        return (cw - lw - margin, ch - lh - margin)
+    if position is WatermarkPosition.BOTTOM_LEFT:
+        return (margin, ch - lh - margin)
+    if position is WatermarkPosition.BOTTOM_CENTER:
+        return ((cw - lw) // 2, ch - lh - margin)
+    if position is WatermarkPosition.TOP_RIGHT:
+        return (cw - lw - margin, margin)
+    if position is WatermarkPosition.TOP_LEFT:
+        return (margin, margin)
+    return ((cw - lw) // 2, margin)
+
+
+def _apply_watermark(canvas: Image.Image, wm: WatermarkConfig) -> Image.Image:
+    if wm.path is None:
+        return canvas
+    with Image.open(wm.path) as raw:
+        logo = raw.convert("RGBA")
+    target_w = max(1, round(max(canvas.size) * wm.size_ratio))
+    scale = target_w / logo.size[0]
+    logo = logo.resize((target_w, max(1, round(logo.size[1] * scale))), Image.Resampling.LANCZOS)
+    if wm.opacity < 1.0:
+        alpha = logo.split()[3].point(lambda p: round(p * wm.opacity))
+        logo.putalpha(alpha)
+    xy = _watermark_xy(wm.position, canvas.size, logo.size, wm.margin)
+    base = canvas.convert("RGBA")
+    base.alpha_composite(logo, xy)
+    return base.convert("RGB")
+
+
 def _pad_to_ratio(
     image: Image.Image, target_ratio: float, fill: tuple[int, int, int]
 ) -> Image.Image:
@@ -135,6 +175,7 @@ def _frame_image(
     exif: ExifData,
     instagram: InstagramConfig | None = None,
     caption: CaptionConfig | None = None,
+    watermark: WatermarkConfig | None = None,
 ) -> Image.Image:
     canvas = ImageOps.expand(
         image,
@@ -145,6 +186,8 @@ def _frame_image(
         _draw_metadata(canvas, border, metadata, exif)
     if caption is not None:
         _draw_caption(canvas, border, caption)
+    if watermark is not None:
+        canvas = _apply_watermark(canvas, watermark)
     if instagram is not None:
         canvas = _apply_instagram(canvas, instagram, border.color)
     return canvas
@@ -158,13 +201,14 @@ def apply_frame(
     exif: ExifData,
     instagram: InstagramConfig | None = None,
     caption: CaptionConfig | None = None,
+    watermark: WatermarkConfig | None = None,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(image_path) as original:
         original.load()
         exif_bytes = original.info.get("exif")
         icc = original.info.get("icc_profile")
-        framed = _frame_image(original, border, metadata, exif, instagram, caption)
+        framed = _frame_image(original, border, metadata, exif, instagram, caption, watermark)
 
     keep_quality = instagram is None or instagram.downscale_to is None
     save_kwargs: dict[str, Any] = {
@@ -197,6 +241,7 @@ def render_preview(
     max_dim: int = 1400,
     instagram: InstagramConfig | None = None,
     caption: CaptionConfig | None = None,
+    watermark: WatermarkConfig | None = None,
 ) -> Image.Image:
     with Image.open(image_path) as original:
         original.load()
@@ -224,11 +269,22 @@ def render_preview(
         if caption is not None
         else None
     )
+    scaled_watermark = (
+        watermark.model_copy(update={"margin": max(0, round(watermark.margin * scale))})
+        if watermark is not None
+        else None
+    )
     # Don't downscale the preview again to Instagram size — the GUI already
     # works with a thumbnail. Just pad to the target ratio.
     preview_instagram = (
         instagram.model_copy(update={"downscale_to": None}) if instagram is not None else None
     )
     return _frame_image(
-        thumb, scaled_border, scaled_metadata, exif, preview_instagram, scaled_caption
+        thumb,
+        scaled_border,
+        scaled_metadata,
+        exif,
+        preview_instagram,
+        scaled_caption,
+        scaled_watermark,
     )

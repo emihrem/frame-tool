@@ -15,6 +15,8 @@ from frame_tool.models import (
     InstagramPreset,
     MetadataConfig,
     MetadataPosition,
+    WatermarkConfig,
+    WatermarkPosition,
 )
 
 app = typer.Typer(
@@ -110,6 +112,26 @@ def process(
     caption_font_size: Annotated[
         int, typer.Option("--caption-font-size", help="Caption font size in pixels.")
     ] = 28,
+    watermark: Annotated[
+        Path | None,
+        typer.Option(
+            "--watermark", help="PNG with transparency to overlay (logo / signature).", exists=True
+        ),
+    ] = None,
+    watermark_position: Annotated[
+        WatermarkPosition,
+        typer.Option("--watermark-position", help="Where the watermark sits."),
+    ] = WatermarkPosition.BOTTOM_RIGHT,
+    watermark_opacity: Annotated[
+        float, typer.Option("--watermark-opacity", help="0.0 (invisible) to 1.0 (opaque).")
+    ] = 1.0,
+    watermark_size: Annotated[
+        float,
+        typer.Option(
+            "--watermark-size",
+            help="Watermark width as fraction of the canvas long edge (e.g. 0.12).",
+        ),
+    ] = 0.1,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -139,6 +161,12 @@ def process(
             position=caption_position,
             font=caption_font,
             font_size=caption_font_size,
+        ),
+        watermark=WatermarkConfig(
+            path=watermark,
+            position=watermark_position,
+            opacity=watermark_opacity,
+            size_ratio=watermark_size,
         ),
     )
 

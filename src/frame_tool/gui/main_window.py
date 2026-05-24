@@ -29,6 +29,7 @@ from frame_tool.models import (
     FrameJob,
     InstagramConfig,
     MetadataConfig,
+    WatermarkConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ class _PreviewWorker(QObject):
         exif: ExifData,
         instagram: InstagramConfig,
         caption: CaptionConfig,
+        watermark: WatermarkConfig,
         max_dim: int,
     ) -> None:
         super().__init__()
@@ -57,6 +59,7 @@ class _PreviewWorker(QObject):
         self._exif = exif
         self._instagram = instagram
         self._caption = caption
+        self._watermark = watermark
         self._max_dim = max_dim
 
     @Slot()
@@ -70,6 +73,7 @@ class _PreviewWorker(QObject):
                 self._max_dim,
                 instagram=self._instagram,
                 caption=self._caption,
+                watermark=self._watermark,
             )
             self.finished.emit(image, self._image_path.name)
         except (OSError, ValueError) as exc:
@@ -293,6 +297,7 @@ class MainWindow(QMainWindow):
             exif,
             self._controls.instagram,
             self._controls.caption,
+            self._controls.watermark,
             max_dim=1400,
         )
         worker.moveToThread(thread)
@@ -339,6 +344,7 @@ class MainWindow(QMainWindow):
                 metadata=self._controls.metadata,
                 instagram=self._controls.instagram,
                 caption=self._controls.caption,
+                watermark=self._controls.watermark,
             )
         except ValueError as exc:
             QMessageBox.critical(self, "Invalid configuration", str(exc))

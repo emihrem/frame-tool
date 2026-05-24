@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QSize, Qt, Signal
@@ -6,6 +8,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
     QComboBox,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -28,6 +31,8 @@ from frame_tool.models import (
     InstagramPreset,
     MetadataConfig,
     MetadataPosition,
+    WatermarkConfig,
+    WatermarkPosition,
 )
 
 _POSITION_LABELS: dict[MetadataPosition, str] = {
@@ -46,6 +51,15 @@ _INSTAGRAM_LABELS: dict[InstagramPreset, str] = {
     InstagramPreset.PORTRAIT: "Portrait · 4:5",
     InstagramPreset.LANDSCAPE: "Landscape · 1.91:1",
     InstagramPreset.STORY: "Story / Reel · 9:16",
+}
+
+_WATERMARK_LABELS: dict[WatermarkPosition, str] = {
+    WatermarkPosition.BOTTOM_RIGHT: "Bottom · Right",
+    WatermarkPosition.BOTTOM_LEFT: "Bottom · Left",
+    WatermarkPosition.BOTTOM_CENTER: "Bottom · Center",
+    WatermarkPosition.TOP_RIGHT: "Top · Right",
+    WatermarkPosition.TOP_LEFT: "Top · Left",
+    WatermarkPosition.TOP_CENTER: "Top · Center",
 }
 
 
@@ -183,6 +197,7 @@ class ControlsPanel(QScrollArea):
         self._metadata = MetadataConfig()
         self._instagram = InstagramConfig()
         self._caption = CaptionConfig()
+        self._watermark = WatermarkConfig()
 
         container = QWidget()
         container.setObjectName("sidePanel")
@@ -193,6 +208,7 @@ class ControlsPanel(QScrollArea):
         layout.addWidget(self._build_border_group())
         layout.addWidget(self._build_metadata_group())
         layout.addWidget(self._build_caption_group())
+        layout.addWidget(self._build_watermark_group())
         layout.addWidget(self._build_instagram_group())
         layout.addStretch(1)
 
@@ -330,6 +346,72 @@ class ControlsPanel(QScrollArea):
 
         return group
 
+    def _build_watermark_group(self) -> QGroupBox:
+        group = QGroupBox("Watermark")
+        layout = QVBoxLayout(group)
+        layout.setSpacing(8)
+
+        file_row = QHBoxLayout()
+        file_row.setSpacing(8)
+        self._wm_choose = QPushButton("Choose file…")
+        self._wm_choose.clicked.connect(self._pick_watermark)
+        file_row.addWidget(self._wm_choose)
+        self._wm_clear = QPushButton("✕")
+        self._wm_clear.setFixedWidth(28)
+        self._wm_clear.clicked.connect(self._clear_watermark)
+        file_row.addWidget(self._wm_clear)
+        layout.addLayout(file_row)
+
+        self._wm_path_label = QLabel("None")
+        self._wm_path_label.setStyleSheet("color: #888; font-size: 11px;")
+        self._wm_path_label.setWordWrap(True)
+        layout.addWidget(self._wm_path_label)
+
+        position_row = QHBoxLayout()
+        position_row.setSpacing(10)
+        position_row.addWidget(QLabel("Position"))
+        self._wm_position = QComboBox()
+        for pos, label in _WATERMARK_LABELS.items():
+            self._wm_position.addItem(label, pos)
+        self._wm_position.setCurrentIndex(
+            list(_WATERMARK_LABELS.keys()).index(self._watermark.position)
+        )
+        self._wm_position.currentIndexChanged.connect(self._sync)
+        position_row.addWidget(self._wm_position, stretch=1)
+        layout.addLayout(position_row)
+
+        self._wm_opacity = _SliderField("Opacity", 0, 100, round(self._watermark.opacity * 100))
+        self._wm_opacity.valueChanged.connect(self._sync)
+        layout.addWidget(self._wm_opacity)
+
+        self._wm_size = _SliderField("Size", 1, 50, round(self._watermark.size_ratio * 100))
+        self._wm_size.valueChanged.connect(self._sync)
+        layout.addWidget(self._wm_size)
+
+        return group
+
+    def _pick_watermark(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Choose watermark image",
+            "",
+            "Images (*.png *.jpg *.jpeg);;PNG (*.png)",
+        )
+        if path:
+            self._watermark = self._watermark.model_copy(update={"path": Path(path)})
+            self._refresh_watermark_label()
+            self._sync()
+
+    def _clear_watermark(self) -> None:
+        self._watermark = self._watermark.model_copy(update={"path": None})
+        self._refresh_watermark_label()
+        self._sync()
+
+    def _refresh_watermark_label(self) -> None:
+        self._wm_path_label.setText(
+            self._watermark.path.name if self._watermark.path is not None else "None"
+        )
+
     def _build_instagram_group(self) -> QGroupBox:
         group = QGroupBox("Instagram")
         layout = QVBoxLayout(group)
@@ -394,6 +476,13 @@ class ControlsPanel(QScrollArea):
             font_size=self._caption_size.value(),
             margin=self._caption.margin,
         )
+        self._watermark = WatermarkConfig(
+            path=self._watermark.path,
+            position=self._wm_position.currentData(),
+            opacity=self._wm_opacity.value() / 100.0,
+            size_ratio=self._wm_size.value() / 100.0,
+            margin=self._watermark.margin,
+        )
         self.configChanged.emit()
 
     @property
@@ -411,3 +500,7 @@ class ControlsPanel(QScrollArea):
     @property
     def caption(self) -> CaptionConfig:
         return self._caption
+
+    @property
+    def watermark(self) -> WatermarkConfig:
+        return self._watermark

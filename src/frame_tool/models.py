@@ -150,6 +150,37 @@ class ExifData(BaseModel):
         return cfg.separator.join(parts)
 
 
+class WatermarkPosition(StrEnum):
+    BOTTOM_RIGHT = "bottom-right"
+    BOTTOM_LEFT = "bottom-left"
+    BOTTOM_CENTER = "bottom-center"
+    TOP_RIGHT = "top-right"
+    TOP_LEFT = "top-left"
+    TOP_CENTER = "top-center"
+
+
+class WatermarkConfig(BaseModel):
+    """Optional logo / signature PNG composited inside the framed canvas.
+
+    ``path is None`` disables rendering, so this can live on every job/preset
+    without a separate enabled flag. ``size_ratio`` is the watermark width
+    as a fraction of the canvas's longer side.
+    """
+
+    path: Path | None = None
+    position: WatermarkPosition = WatermarkPosition.BOTTOM_RIGHT
+    opacity: float = Field(default=1.0, ge=0.0, le=1.0)
+    size_ratio: float = Field(default=0.1, ge=0.01, le=1.0)
+    margin: int = Field(default=40, ge=0, le=500)
+
+    @field_validator("path")
+    @classmethod
+    def _path_must_exist(cls, value: Path | None) -> Path | None:
+        if value is not None and not value.is_file():
+            raise ValueError(f"Watermark file not found: {value}")
+        return value
+
+
 class CaptionConfig(BaseModel):
     """Free-text caption rendered in the border, separate from EXIF.
 
@@ -171,6 +202,7 @@ class FrameJob(BaseModel):
     metadata: MetadataConfig = Field(default_factory=MetadataConfig)
     instagram: InstagramConfig = Field(default_factory=InstagramConfig)
     caption: CaptionConfig = Field(default_factory=CaptionConfig)
+    watermark: WatermarkConfig = Field(default_factory=WatermarkConfig)
 
     @field_validator("input_dir")
     @classmethod
