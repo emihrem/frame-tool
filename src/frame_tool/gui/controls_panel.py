@@ -31,6 +31,7 @@ from frame_tool.models import (
     InstagramPreset,
     MetadataConfig,
     MetadataPosition,
+    Preset,
     WatermarkConfig,
     WatermarkPosition,
 )
@@ -504,3 +505,91 @@ class ControlsPanel(QScrollArea):
     @property
     def watermark(self) -> WatermarkConfig:
         return self._watermark
+
+    def apply_preset(self, preset: Preset) -> None:
+        """Push every value from ``preset`` into the widgets, then emit once."""
+        widgets_to_block = [
+            self._top._slider,
+            self._top._spin,
+            self._bottom._slider,
+            self._bottom._spin,
+            self._left._slider,
+            self._left._spin,
+            self._right._slider,
+            self._right._spin,
+            self._color_picker,
+            self._enabled,
+            self._position,
+            self._font,
+            self._font_size._slider,
+            self._font_size._spin,
+            self._aperture,
+            self._shutter,
+            self._iso,
+            self._focal,
+            self._camera,
+            self._caption_text,
+            self._caption_position,
+            self._caption_font,
+            self._caption_size._slider,
+            self._caption_size._spin,
+            self._wm_position,
+            self._wm_opacity._slider,
+            self._wm_opacity._spin,
+            self._wm_size._slider,
+            self._wm_size._spin,
+            self._ig_preset,
+            self._ig_downscale,
+        ]
+        for widget in widgets_to_block:
+            widget.blockSignals(True)
+        try:
+            self._top._slider.setValue(preset.border.top)
+            self._top._spin.setValue(preset.border.top)
+            self._bottom._slider.setValue(preset.border.bottom)
+            self._bottom._spin.setValue(preset.border.bottom)
+            self._left._slider.setValue(preset.border.left)
+            self._left._spin.setValue(preset.border.left)
+            self._right._slider.setValue(preset.border.right)
+            self._right._spin.setValue(preset.border.right)
+            self._color_picker.set_value(preset.border.color)
+
+            self._enabled.setChecked(preset.metadata.enabled)
+            self._position.setCurrentIndex(
+                list(_POSITION_LABELS.keys()).index(preset.metadata.position)
+            )
+            self._font.setCurrentIndex(list(FontFamily).index(preset.metadata.font))
+            self._font_size._slider.setValue(preset.metadata.font_size)
+            self._font_size._spin.setValue(preset.metadata.font_size)
+            self._aperture.setChecked(preset.metadata.show_aperture)
+            self._shutter.setChecked(preset.metadata.show_shutter_speed)
+            self._iso.setChecked(preset.metadata.show_iso)
+            self._focal.setChecked(preset.metadata.show_focal_length)
+            self._camera.setChecked(preset.metadata.show_camera_model)
+
+            self._caption_text.setText(preset.caption.text)
+            self._caption_position.setCurrentIndex(
+                list(_POSITION_LABELS.keys()).index(preset.caption.position)
+            )
+            self._caption_font.setCurrentIndex(list(FontFamily).index(preset.caption.font))
+            self._caption_size._slider.setValue(preset.caption.font_size)
+            self._caption_size._spin.setValue(preset.caption.font_size)
+
+            self._watermark = preset.watermark
+            self._wm_position.setCurrentIndex(
+                list(_WATERMARK_LABELS.keys()).index(preset.watermark.position)
+            )
+            self._wm_opacity._slider.setValue(round(preset.watermark.opacity * 100))
+            self._wm_opacity._spin.setValue(round(preset.watermark.opacity * 100))
+            self._wm_size._slider.setValue(round(preset.watermark.size_ratio * 100))
+            self._wm_size._spin.setValue(round(preset.watermark.size_ratio * 100))
+            self._refresh_watermark_label()
+
+            self._ig_preset.setCurrentIndex(
+                list(_INSTAGRAM_LABELS.keys()).index(preset.instagram.preset)
+            )
+            self._ig_downscale.setChecked(preset.instagram.downscale_to is not None)
+        finally:
+            for widget in widgets_to_block:
+                widget.blockSignals(False)
+        self._sync()

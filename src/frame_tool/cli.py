@@ -4,6 +4,7 @@ from typing import Annotated
 
 import typer
 
+from frame_tool import presets as preset_store
 from frame_tool.batch import process_folder
 from frame_tool.colors import WHITE, parse_color
 from frame_tool.models import (
@@ -15,6 +16,7 @@ from frame_tool.models import (
     InstagramPreset,
     MetadataConfig,
     MetadataPosition,
+    Preset,
     WatermarkConfig,
     WatermarkPosition,
 )
@@ -132,8 +134,32 @@ def process(
             help="Watermark width as fraction of the canvas long edge (e.g. 0.12).",
         ),
     ] = 0.1,
+    preset: Annotated[
+        str | None,
+        typer.Option(
+            "--preset",
+            help="Load a saved preset by name. Overrides all other rendering flags.",
+        ),
+    ] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    if preset is not None:
+        try:
+            saved = preset_store.load_preset(preset)
+        except KeyError as exc:
+            raise typer.BadParameter(str(exc), param_hint="--preset") from exc
+        job = FrameJob(
+            input_dir=input_dir,
+            output_dir=output or (input_dir / "framed"),
+            border=saved.border,
+            metadata=saved.metadata,
+            instagram=saved.instagram,
+            caption=saved.caption,
+            watermark=saved.watermark,
+        )
+        _run_job(job)
+        return
 
     try:
         parsed_color = parse_color(color)
@@ -170,11 +196,89 @@ def process(
         ),
     )
 
+    _run_job(job)
+
+
+def _run_job(job: FrameJob) -> None:
     def report(current: int, total: int, file: Path) -> None:
         typer.echo(f"[{current}/{total}] {file.name}")
 
     written = process_folder(job, on_progress=report)
     typer.echo(f"Done. Wrote {len(written)} file(s) to {job.output_dir}")
+
+
+@app.command("list-presets", help="List saved presets.")
+def list_presets_cmd() -> None:
+    names = preset_store.list_presets()
+    if not names:
+        typer.echo("(no presets saved yet)")
+        return
+    for name in names:
+        typer.echo(name)
+
+
+@app.command(
+    "save-preset",
+    help="Save the current settings (passed as flags) as a named preset.",
+    context_settings={"allow_extra_args": False},
+)
+def save_preset_cmd(
+    name: Annotated[str, typer.Argument(help="Preset name.")],
+    color: Annotated[str, typer.Option(help="Border color.")] = WHITE,
+    top: Annotated[int, typer.Option()] = 50,
+    bottom: Annotated[int, typer.Option()] = 200,
+    left: Annotated[int, typer.Option()] = 50,
+    right: Annotated[int, typer.Option()] = 50,
+    metadata_position: Annotated[
+        MetadataPosition, typer.Option("--metadata-position")
+    ] = MetadataPosition.BOTTOM_CENTER,
+    font: Annotated[FontFamily, typer.Option()] = FontFamily.MONTSERRAT,
+    font_size: Annotated[int, typer.Option()] = 36,
+    caption: Annotated[str, typer.Option()] = "",
+    caption_position: Annotated[
+        MetadataPosition, typer.Option("--caption-position")
+    ] = MetadataPosition.BOTTOM_LEFT,
+    instagram: Annotated[InstagramPreset, typer.Option()] = InstagramPreset.NONE,
+    instagram_size: Annotated[int | None, typer.Option("--instagram-size")] = None,
+    watermark: Annotated[Path | None, typer.Option(exists=True)] = None,
+    watermark_position: Annotated[
+        WatermarkPosition, typer.Option("--watermark-position")
+    ] = WatermarkPosition.BOTTOM_RIGHT,
+    watermark_opacity: Annotated[float, typer.Option("--watermark-opacity")] = 1.0,
+    watermark_size: Annotated[float, typer.Option("--watermark-size")] = 0.1,
+) -> None:
+    try:
+        parsed_color = parse_color(color)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--color") from exc
+
+    try:
+        preset = Preset(
+            name=name,
+            border=BorderConfig(top=top, bottom=bottom, left=left, right=right, color=parsed_color),
+            metadata=MetadataConfig(position=metadata_position, font=font, font_size=font_size),
+            instagram=InstagramConfig(preset=instagram, downscale_to=instagram_size),
+            caption=CaptionConfig(text=caption, position=caption_position, font=font),
+            watermark=WatermarkConfig(
+                path=watermark,
+                position=watermark_position,
+                opacity=watermark_opacity,
+                size_ratio=watermark_size,
+            ),
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    preset_store.save_preset(preset)
+    typer.echo(f"Saved preset '{name}' to {preset_store.PRESETS_PATH}")
+
+
+@app.command("delete-preset", help="Delete a saved preset by name.")
+def delete_preset_cmd(name: Annotated[str, typer.Argument(help="Preset name.")]) -> None:
+    if name not in preset_store.list_presets():
+        raise typer.BadParameter(f"Preset not found: {name}")
+    preset_store.delete_preset(name)
+    typer.echo(f"Deleted preset '{name}'")
 
 
 if __name__ == "__main__":

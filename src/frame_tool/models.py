@@ -195,6 +195,17 @@ class CaptionConfig(BaseModel):
     margin: int = Field(default=24, ge=0, le=500)
 
 
+class Preset(BaseModel):
+    """A named, reusable bundle of every render setting except input/output paths."""
+
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9 _\-\.()]+$")
+    border: BorderConfig = Field(default_factory=BorderConfig)
+    metadata: MetadataConfig = Field(default_factory=MetadataConfig)
+    instagram: InstagramConfig = Field(default_factory=InstagramConfig)
+    caption: CaptionConfig = Field(default_factory=CaptionConfig)
+    watermark: WatermarkConfig = Field(default_factory=WatermarkConfig)
+
+
 class FrameJob(BaseModel):
     input_dir: Path
     output_dir: Path

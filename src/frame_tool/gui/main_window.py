@@ -4,8 +4,10 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -17,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from frame_tool import presets as preset_store
 from frame_tool.batch import find_images, process_folder
 from frame_tool.exif import read_exif
 from frame_tool.framer import render_preview
@@ -29,6 +32,7 @@ from frame_tool.models import (
     FrameJob,
     InstagramConfig,
     MetadataConfig,
+    Preset,
     WatermarkConfig,
 )
 
@@ -224,6 +228,26 @@ class MainWindow(QMainWindow):
 
         title = QLabel("frame_tool")
         layout.addWidget(title)
+
+        layout.addSpacing(16)
+        preset_label = QLabel("Preset")
+        preset_label.setStyleSheet("color: #888; font-size: 12px;")
+        layout.addWidget(preset_label)
+
+        self._preset_combo = QComboBox()
+        self._preset_combo.setMinimumWidth(180)
+        self._reload_presets()
+        self._preset_combo.currentIndexChanged.connect(self._on_preset_selected)
+        layout.addWidget(self._preset_combo)
+
+        save_btn = QPushButton("Save")
+        save_btn.clicked.connect(self._save_preset)
+        layout.addWidget(save_btn)
+
+        del_btn = QPushButton("Delete")
+        del_btn.clicked.connect(self._delete_preset)
+        layout.addWidget(del_btn)
+
         layout.addStretch(1)
 
         self._folder_label = QLabel("No folder selected")
@@ -240,6 +264,61 @@ class MainWindow(QMainWindow):
         self._export_btn.setEnabled(False)
         layout.addWidget(self._export_btn)
         return bar
+
+    def _reload_presets(self, *, select: str | None = None) -> None:
+        self._preset_combo.blockSignals(True)
+        self._preset_combo.clear()
+        self._preset_combo.addItem("(no preset)", None)
+        for name in preset_store.list_presets():
+            self._preset_combo.addItem(name, name)
+        if select is not None:
+            idx = self._preset_combo.findData(select)
+            if idx >= 0:
+                self._preset_combo.setCurrentIndex(idx)
+        self._preset_combo.blockSignals(False)
+
+    @Slot(int)
+    def _on_preset_selected(self, _index: int) -> None:
+        name = self._preset_combo.currentData()
+        if name is None:
+            return
+        try:
+            preset = preset_store.load_preset(name)
+        except (KeyError, ValueError) as exc:
+            QMessageBox.warning(self, "Preset", str(exc))
+            return
+        self._controls.apply_preset(preset)
+
+    def _save_preset(self) -> None:
+        name, ok = QInputDialog.getText(self, "Save preset", "Name:")
+        if not ok or not name.strip():
+            return
+        try:
+            preset = Preset(
+                name=name.strip(),
+                border=self._controls.border,
+                metadata=self._controls.metadata,
+                instagram=self._controls.instagram,
+                caption=self._controls.caption,
+                watermark=self._controls.watermark,
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Save preset", str(exc))
+            return
+        preset_store.save_preset(preset)
+        self._reload_presets(select=preset.name)
+        self.statusBar().showMessage(f"Saved preset '{preset.name}'", 5000)
+
+    def _delete_preset(self) -> None:
+        name = self._preset_combo.currentData()
+        if name is None:
+            return
+        confirm = QMessageBox.question(self, "Delete preset", f"Delete preset '{name}'?")
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        preset_store.delete_preset(name)
+        self._reload_presets()
+        self.statusBar().showMessage(f"Deleted preset '{name}'", 5000)
 
     def _select_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Select folder with JPG images")
