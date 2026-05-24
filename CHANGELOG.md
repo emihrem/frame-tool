@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-05-24
+
+### Added
+
+- **Free-form border colour**: pick any hex (`#RRGGBB`) via `QColorDialog` in the GUI, or pass `--color "#F5F5DC"` / `--color cream` in the CLI. Text colour auto-flips for contrast.
+- **Free-text caption** rendered in the border alongside the EXIF line. Independent position, font, and size so EXIF and caption can sit in different corners.
+- **PNG watermark / signature overlay** with configurable position, opacity, and size (as a fraction of the canvas's long edge). Composited via alpha-blending; transparency preserved.
+- **Saveable presets**: bundle every render setting under a name (`~/.frame_tool/presets.json`). New CLI subcommands `save-preset`, `list-presets`, `delete-preset`, plus a `--preset NAME` flag on `process`. GUI top-bar combo + Save / Delete buttons.
+
+### Changed
+
+- Border colour storage went from a `white`/`black` enum to a hex string. CLI back-compat preserved through named-colour parsing.
+- 137 → 160 tests; coverage still ~82%.
+
 ## [0.2.0] — 2026-05-24
 
 First public release.
@@ -25,4 +39,5 @@ First public release.
 - GitHub Actions CI matrix: Linux / macOS / Windows × Python 3.11 / 3.12.
 - Codecov uploads, pre-commit hooks for ruff and mypy.
 
+[0.3.0]: https://github.com/emihrem/frame-tool/releases/tag/v0.3.0
 [0.2.0]: https://github.com/emihrem/frame-tool/releases/tag/v0.2.0

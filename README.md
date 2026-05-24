@@ -94,8 +94,16 @@ Flags:
 | `--no-metadata` | off | Disable text overlay entirely |
 | `--no-aperture / --no-shutter / --no-iso` | shown | Hide a field |
 | `--focal-length / --camera-model` | hidden | Include a field |
+| `--caption "© Emi"` | `""` | Free-text rendered in the border |
+| `--caption-position` | `bottom-left` | Same six positions as `--metadata-position` |
+| `--caption-font / --caption-font-size` | `montserrat` / `28` | Caption typeface and size |
+| `--watermark PATH` | _(off)_ | PNG with transparency, composited inside the frame |
+| `--watermark-position` | `bottom-right` | Where the logo sits |
+| `--watermark-opacity` | `1.0` | 0.0–1.0 |
+| `--watermark-size` | `0.1` | Logo width as fraction of the canvas long edge |
 | `--instagram` | `none` | `none`, `auto`, `square`, `portrait`, `landscape`, `story` |
 | `--instagram-size` | _(off)_ | Downscale long edge to this many px (e.g. `1080`) |
+| `--preset NAME` | _(off)_ | Load a saved preset; overrides all other render flags |
 | `--output / -o` | `<input>/framed` | Output folder |
 
 Output filenames are `<original>_framed.jpg`.
@@ -114,6 +122,28 @@ frame-tool process ./photos --instagram auto
 ```
 
 The tool **never crops** — it adds extra border in the chosen colour on the two sides needed to reach the target ratio. Instagram does its own downscale on upload; `--instagram-size 1080` only matters if you want the exported file to already match.
+
+### Presets
+
+Saved settings live in `~/.frame_tool/presets.json` (created on first save).
+
+```bash
+# Save the current flag set under a name
+frame-tool save-preset wedding \
+  --color cream --top 60 --bottom 240 \
+  --caption "© 2026 Emi Mer" --caption-position bottom-right
+
+# List what you've saved
+frame-tool list-presets
+
+# Re-use it on any folder — preset overrides every other render flag
+frame-tool process ./trip --preset wedding
+
+# Remove
+frame-tool delete-preset wedding
+```
+
+In the GUI: top-bar **Preset** dropdown + **Save** / **Delete** buttons. Saving prompts for a name; selecting a saved preset pushes every value into the controls in one shot.
 
 ## Build a standalone app (double-click, no terminal)
 
