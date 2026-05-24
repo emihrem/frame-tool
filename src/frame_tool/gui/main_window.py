@@ -1,8 +1,9 @@
 import logging
+import os
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QCloseEvent, QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -35,6 +36,7 @@ from frame_tool.models import (
     Preset,
     WatermarkConfig,
 )
+from frame_tool.updates import OPT_OUT_ENV, UpdateInfo, check_for_update
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +106,18 @@ class _ExportWorker(QObject):
             self.finished.emit(len(written), str(self._job.output_dir))
         except (OSError, ValueError) as exc:
             self.failed.emit(str(exc))
+
+
+class _UpdateCheckWorker(QObject):
+    found = Signal(object)
+    finished = Signal()
+
+    @Slot()
+    def run(self) -> None:
+        info = check_for_update()
+        if info is not None:
+            self.found.emit(info)
+        self.finished.emit()
 
 
 class _ExifPanel(QWidget):
@@ -180,6 +194,9 @@ class MainWindow(QMainWindow):
         self._export_worker: _ExportWorker | None = None
         self._export_dialog: QProgressDialog | None = None
         self._preview_pending: bool = False
+        self._update_url: str | None = None
+        self._update_thread: QThread | None = None
+        self._update_worker: _UpdateCheckWorker | None = None
 
         self._debounce = QTimer(self)
         self._debounce.setSingleShot(True)
@@ -218,6 +235,9 @@ class MainWindow(QMainWindow):
         self.setStatusBar(status)
         status.showMessage("Ready")
 
+        if not os.environ.get(OPT_OUT_ENV):
+            QTimer.singleShot(0, self._kick_off_update_check)
+
     def _build_top_bar(self) -> QWidget:
         bar = QWidget()
         bar.setObjectName("topBar")
@@ -249,6 +269,13 @@ class MainWindow(QMainWindow):
         layout.addWidget(del_btn)
 
         layout.addStretch(1)
+
+        self._update_btn = QPushButton()
+        self._update_btn.setObjectName("primary")
+        self._update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._update_btn.clicked.connect(self._open_update_url)
+        self._update_btn.hide()
+        layout.addWidget(self._update_btn)
 
         self._folder_label = QLabel("No folder selected")
         self._folder_label.setStyleSheet("color: #888; font-size: 12px;")
@@ -484,8 +511,38 @@ class MainWindow(QMainWindow):
         self._export_worker = None
         self._export_btn.setEnabled(True)
 
+    def _kick_off_update_check(self) -> None:
+        thread = QThread(self)
+        worker = _UpdateCheckWorker()
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.found.connect(self._on_update_found)
+        worker.finished.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(self._clear_update_thread)
+        self._update_thread = thread
+        self._update_worker = worker
+        thread.start()
+
+    @Slot(object)
+    def _on_update_found(self, info: object) -> None:
+        if not isinstance(info, UpdateInfo):
+            return
+        self._update_url = info.html_url
+        self._update_btn.setText(f"🆕 v{info.version} available")
+        self._update_btn.setToolTip(f"Click to view {info.name} on GitHub")
+        self._update_btn.show()
+
+    def _open_update_url(self) -> None:
+        if self._update_url:
+            QDesktopServices.openUrl(QUrl(self._update_url))
+
+    def _clear_update_thread(self) -> None:
+        self._update_thread = None
+        self._update_worker = None
+
     def closeEvent(self, event: QCloseEvent) -> None:
-        for thread in (self._preview_thread, self._export_thread):
+        for thread in (self._preview_thread, self._export_thread, self._update_thread):
             if thread is not None and thread.isRunning():
                 thread.quit()
                 thread.wait(2000)

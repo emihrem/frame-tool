@@ -1,9 +1,14 @@
+import os
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from PIL import Image
 from PIL.ExifTags import Base as ExifTag
+
+# Disable the GUI's GitHub release check during tests so we don't hit the
+# network or segfault on threads racing during teardown.
+os.environ.setdefault("FRAME_TOOL_NO_UPDATE_CHECK", "1")
 
 
 def _build_exif_bytes(

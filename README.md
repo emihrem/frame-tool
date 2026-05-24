@@ -28,6 +28,7 @@ Built for photographers who edit in Lightroom and want a simple post-export step
 - Batch export an entire folder with one click (or one CLI command).
 - Original JPEG quality and EXIF metadata preserved on export (`quality="keep"`, `subsampling="keep"`).
 - Three typefaces bundled (Montserrat / Inter / Lora) — same look on every OS.
+- Background check for new releases on launch (opt-out with `FRAME_TOOL_NO_UPDATE_CHECK=1`).
 
 ## Install (recommended: `uv`)
 
