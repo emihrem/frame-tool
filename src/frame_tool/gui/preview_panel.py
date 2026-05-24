@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QResizeEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -88,7 +88,7 @@ class PreviewPanel(QWidget):
         )
         self._image_label.setPixmap(scaled)
 
-    def resizeEvent(self, event) -> None:  # type: ignore[override]
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._rescale()
 

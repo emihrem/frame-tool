@@ -27,7 +27,8 @@ def _register_font() -> None:
 
 
 def launch_gui() -> int:
-    app = QApplication.instance() or QApplication(sys.argv)
+    existing = QApplication.instance()
+    app = existing if isinstance(existing, QApplication) else QApplication(sys.argv)
     app.setApplicationName("frame_tool")
     app.setOrganizationName("frame_tool")
     _register_font()

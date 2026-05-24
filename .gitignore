@@ -27,3 +27,8 @@ uv.lock
 # Test scratch
 test_input/
 test_output/
+.coverage
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

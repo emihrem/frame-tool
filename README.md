@@ -1,5 +1,12 @@
 # frame_tool
 
+[![CI](https://github.com/emihrem/frame-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/emihrem/frame-tool/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/emihrem/frame-tool/branch/main/graph/badge.svg)](https://codecov.io/gh/emihrem/frame-tool)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Add white or black borders to JPG photos and stamp them with EXIF metadata (aperture, shutter speed, ISO). Cross-platform (macOS / Linux / Windows) with a modern dark GUI and a CLI for batch processing.
 
 Built for photographers who edit in Lightroom and want a simple post-export step to add borders + shooting info — without ever touching the underlying JPEG quality.
@@ -101,6 +108,23 @@ The bundle includes Python, PySide6/Qt, Pillow, the Inter font, and the QSS them
 > **macOS note**: the build is unsigned, so the first launch will trigger Gatekeeper. Right-click the app → *Open* → *Open* (only needed once). For distribution to others, sign and notarize with `codesign` + `notarytool`.
 >
 > Each OS produces its own bundle — you can't build a Windows `.exe` from macOS. Build on the target platform (or via CI on a matrix runner).
+
+## Development
+
+```bash
+uv venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
+pre-commit install
+```
+
+Quality gates run in CI on every push and PR:
+
+```bash
+ruff check .          # lint
+ruff format --check . # format
+mypy                  # type check
+pytest --cov          # tests + coverage
+```
 
 ## Tech stack
 

@@ -53,12 +53,18 @@ def process(
         typer.Option("--metadata-position", help="Where to render EXIF metadata."),
     ] = MetadataPosition.BOTTOM_CENTER,
     font_size: Annotated[int, typer.Option(help="Metadata font size in pixels.")] = 36,
-    no_metadata: Annotated[bool, typer.Option("--no-metadata", help="Disable metadata overlay.")] = False,
+    no_metadata: Annotated[
+        bool, typer.Option("--no-metadata", help="Disable metadata overlay.")
+    ] = False,
     no_aperture: Annotated[bool, typer.Option("--no-aperture", help="Hide aperture.")] = False,
     no_shutter: Annotated[bool, typer.Option("--no-shutter", help="Hide shutter speed.")] = False,
     no_iso: Annotated[bool, typer.Option("--no-iso", help="Hide ISO.")] = False,
-    focal_length: Annotated[bool, typer.Option("--focal-length", help="Include focal length.")] = False,
-    camera_model: Annotated[bool, typer.Option("--camera-model", help="Include camera model.")] = False,
+    focal_length: Annotated[
+        bool, typer.Option("--focal-length", help="Include focal length.")
+    ] = False,
+    camera_model: Annotated[
+        bool, typer.Option("--camera-model", help="Include camera model.")
+    ] = False,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 

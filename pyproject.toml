@@ -15,6 +15,14 @@ dependencies = [
 
 [project.optional-dependencies]
 build = ["pyinstaller>=6.10"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "pytest-qt>=4.4",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pre-commit>=3.7",
+]
 
 [project.scripts]
 frame-tool = "frame_tool.cli:app"
@@ -28,3 +36,116 @@ packages = ["src/frame_tool"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/frame_tool", "README.md", "pyproject.toml"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["build", "dist", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+    "PL",   # pylint
+    "PT",   # pytest style
+]
+ignore = [
+    "PLR0913", # too many arguments — pydantic/CLI ergonomics
+    "PLR2004", # magic numbers — common in image/pixel code
+    "E501",    # line too long — formatter handles it
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "S101", "PT018"]
+"scripts/*" = ["INP001"]
+"packaging/*" = ["ALL"]
+# Qt conventions: signals are camelCase, event handlers override Qt's camelCase API
+"src/frame_tool/gui/*" = ["N802", "N815"]
+# Deferred imports in CLI/GUI avoid loading PySide6 just to print --help
+"src/frame_tool/cli.py" = ["PLC0415"]
+"src/frame_tool/gui/main_window.py" = ["PLC0415"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["frame_tool"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy — type checking
+# ---------------------------------------------------------------------------
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src/frame_tool"]
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["PIL.*", "PySide6.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+markers = [
+    "gui: tests that require a Qt display (offscreen platform plugin)",
+    "integration: end-to-end tests touching the filesystem",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+
+[tool.coverage.run]
+source = ["frame_tool"]
+branch = true
+omit = [
+    "src/frame_tool/__main__.py",
+    "src/frame_tool/gui/app.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+skip_covered = false
+precision = 1

@@ -1,5 +1,6 @@
 from fractions import Fraction
 from pathlib import Path
+from typing import SupportsFloat, cast
 
 from PIL import ExifTags, Image
 
@@ -44,9 +45,11 @@ def read_exif(image_path: Path) -> ExifData:
         iso = int(iso_raw)
 
     return ExifData(
-        aperture=float(aperture) if aperture is not None else None,
-        shutter_speed=_format_shutter(float(exposure)) if exposure is not None else None,
+        aperture=float(cast(SupportsFloat, aperture)) if aperture is not None else None,
+        shutter_speed=(
+            _format_shutter(float(cast(SupportsFloat, exposure))) if exposure is not None else None
+        ),
         iso=iso,
-        focal_length=float(focal) if focal is not None else None,
+        focal_length=float(cast(SupportsFloat, focal)) if focal is not None else None,
         camera_model=str(model).strip() if model else None,
     )

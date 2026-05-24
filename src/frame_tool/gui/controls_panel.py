@@ -152,9 +152,7 @@ class ControlsPanel(QScrollArea):
         self._position = QComboBox()
         for pos, label in _POSITION_LABELS.items():
             self._position.addItem(label, pos)
-        self._position.setCurrentIndex(
-            list(_POSITION_LABELS.keys()).index(self._metadata.position)
-        )
+        self._position.setCurrentIndex(list(_POSITION_LABELS.keys()).index(self._metadata.position))
         self._position.currentIndexChanged.connect(self._sync)
         position_row.addWidget(self._position, stretch=1)
         layout.addLayout(position_row)

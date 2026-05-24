@@ -1,5 +1,7 @@
 from importlib.resources import files
+from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -13,10 +15,11 @@ from frame_tool.models import (
 _FONT_RESOURCE = files("frame_tool").joinpath("assets/fonts/Inter-Regular.ttf")
 
 
-def _load_font(size: int) -> ImageFont.FreeTypeFont:
+def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     try:
         with _FONT_RESOURCE.open("rb") as fh:
-            return ImageFont.truetype(fh, size=size)
+            data = fh.read()
+        return ImageFont.truetype(BytesIO(data), size=size)
     except (FileNotFoundError, OSError):
         return ImageFont.load_default(size=size)
 
@@ -52,9 +55,7 @@ def _draw_metadata(
         return
     font = _load_font(metadata.font_size)
     draw = ImageDraw.Draw(canvas)
-    xy, anchor = _text_anchor_xy(
-        metadata.position, canvas.size, border, metadata.margin
-    )
+    xy, anchor = _text_anchor_xy(metadata.position, canvas.size, border, metadata.margin)
     draw.text(xy, text, font=font, fill=border.color.contrast_rgb, anchor=anchor)
 
 
@@ -88,8 +89,7 @@ def apply_frame(
         icc = original.info.get("icc_profile")
         framed = _frame_image(original, border, metadata, exif)
 
-    save_kwargs: dict[str, object] = {
-        "format": "JPEG",
+    save_kwargs: dict[str, Any] = {
         "quality": "keep",
         "subsampling": "keep",
         "optimize": True,
@@ -100,11 +100,11 @@ def apply_frame(
         save_kwargs["icc_profile"] = icc
 
     try:
-        framed.save(output_path, **save_kwargs)
+        framed.save(output_path, format="JPEG", **save_kwargs)
     except (ValueError, OSError):
         save_kwargs["quality"] = 95
         save_kwargs.pop("subsampling", None)
-        framed.save(output_path, **save_kwargs)
+        framed.save(output_path, format="JPEG", **save_kwargs)
 
 
 def render_preview(

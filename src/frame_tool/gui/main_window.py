@@ -20,14 +20,14 @@ from PySide6.QtWidgets import (
 from frame_tool.batch import find_images, process_folder
 from frame_tool.exif import read_exif
 from frame_tool.framer import render_preview
+from frame_tool.gui.controls_panel import ControlsPanel
+from frame_tool.gui.preview_panel import PreviewPanel
 from frame_tool.models import (
     BorderConfig,
     ExifData,
     FrameJob,
     MetadataConfig,
 )
-from frame_tool.gui.controls_panel import ControlsPanel
-from frame_tool.gui.preview_panel import PreviewPanel
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,7 @@ class _ExportWorker(QObject):
     @Slot()
     def run(self) -> None:
         try:
+
             def cb(current: int, total: int, file: Path) -> None:
                 self.progress.emit(current, total, file.name)
 
@@ -318,9 +319,7 @@ class MainWindow(QMainWindow):
         if not self._input_dir or not self._images:
             return
         suggested = self._input_dir / "framed"
-        out = QFileDialog.getExistingDirectory(
-            self, "Choose output folder", str(self._input_dir)
-        )
+        out = QFileDialog.getExistingDirectory(self, "Choose output folder", str(self._input_dir))
         output_dir = Path(out) if out else suggested
         try:
             job = FrameJob(
@@ -388,7 +387,7 @@ class MainWindow(QMainWindow):
         self._export_worker = None
         self._export_btn.setEnabled(True)
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # type: ignore[override]
+    def closeEvent(self, event: QCloseEvent) -> None:
         for thread in (self._preview_thread, self._export_thread):
             if thread is not None and thread.isRunning():
                 thread.quit()
