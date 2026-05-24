@@ -81,6 +81,27 @@ Flags:
 
 Output filenames are `<original>_framed.jpg`.
 
+## Build a standalone app (double-click, no terminal)
+
+You can package frame_tool as a native app — `.app` on macOS, `.exe` folder on Windows, executable folder on Linux. End users don't need Python.
+
+```bash
+# In the project root, with the venv activated:
+uv pip install -e ".[build]"
+pyinstaller packaging/frame_tool.spec --noconfirm --clean
+```
+
+Output:
+
+- **macOS**: `dist/frame_tool.app` (~120 MB). Drag it to `/Applications` and launch with double-click.
+- **Linux / Windows**: `dist/frame_tool/` folder. Run `frame_tool` (or `frame_tool.exe`).
+
+The bundle includes Python, PySide6/Qt, Pillow, the Inter font, and the QSS theme — fully self-contained.
+
+> **macOS note**: the build is unsigned, so the first launch will trigger Gatekeeper. Right-click the app → *Open* → *Open* (only needed once). For distribution to others, sign and notarize with `codesign` + `notarytool`.
+>
+> Each OS produces its own bundle — you can't build a Windows `.exe` from macOS. Build on the target platform (or via CI on a matrix runner).
+
 ## Tech stack
 
 - **Pillow** for image processing, EXIF, and text rendering.
