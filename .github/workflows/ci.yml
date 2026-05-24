@@ -68,11 +68,14 @@ jobs:
             libfontconfig1 libxcb-cursor0
 
       - name: Install
-        run: uv sync --extra dev --python ${{ matrix.python }}
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: uv sync --extra dev
 
       - name: Run tests with coverage
         env:
           QT_QPA_PLATFORM: offscreen
+          UV_PYTHON: ${{ matrix.python }}
         run: uv run pytest --cov=frame_tool --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
