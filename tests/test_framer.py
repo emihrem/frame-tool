@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from frame_tool.colors import BLACK, WHITE
 from frame_tool.exif import read_exif
 from frame_tool.framer import apply_frame, render_preview
 from frame_tool.models import (
-    BorderColor,
     BorderConfig,
     ExifData,
     MetadataConfig,
@@ -43,13 +43,13 @@ class TestApplyFrame:
 
     @pytest.mark.parametrize(
         ("color", "expected"),
-        [(BorderColor.WHITE, (255, 255, 255)), (BorderColor.BLACK, (0, 0, 0))],
+        [(WHITE, (255, 255, 255)), (BLACK, (0, 0, 0))],
     )
     def test_border_color_applied(
         self,
         jpg_factory: JpgFactory,
         tmp_path: Path,
-        color: BorderColor,
+        color: str,
         expected: tuple[int, int, int],
     ) -> None:
         src = jpg_factory()
@@ -59,6 +59,20 @@ class TestApplyFrame:
 
         with Image.open(dst) as out:
             assert out.convert("RGB").getpixel((5, 5)) == expected
+
+    def test_custom_hex_color(self, jpg_factory: JpgFactory, tmp_path: Path) -> None:
+        src = jpg_factory()
+        dst = tmp_path / "out.jpg"
+        cream = "#F5F5DC"
+
+        apply_frame(src, dst, BorderConfig(color=cream), MetadataConfig(enabled=False), ExifData())
+
+        with Image.open(dst) as out:
+            r, g, b = out.convert("RGB").getpixel((5, 5))
+            # JPEG chroma subsampling drifts by ±1 even on solid color blocks.
+            assert abs(r - 245) <= 2
+            assert abs(g - 245) <= 2
+            assert abs(b - 220) <= 2
 
     def test_original_image_preserved_in_center(
         self, jpg_factory: JpgFactory, tmp_path: Path

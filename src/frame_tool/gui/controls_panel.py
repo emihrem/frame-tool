@@ -1,15 +1,15 @@
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QButtonGroup,
     QCheckBox,
+    QColorDialog,
     QComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QRadioButton,
+    QPushButton,
     QScrollArea,
     QSlider,
     QSpinBox,
@@ -17,9 +17,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from frame_tool.colors import BLACK, WHITE, contrast_for, rgb_to_hex
 from frame_tool.framer import _load_font
 from frame_tool.models import (
-    BorderColor,
     BorderConfig,
     FontFamily,
     InstagramConfig,
@@ -45,6 +45,69 @@ _INSTAGRAM_LABELS: dict[InstagramPreset, str] = {
     InstagramPreset.LANDSCAPE: "Landscape · 1.91:1",
     InstagramPreset.STORY: "Story / Reel · 9:16",
 }
+
+
+class _ColorPicker(QWidget):
+    """Swatch + quick W/B buttons + custom picker. Emits ``colorChanged(hex)``."""
+
+    colorChanged = Signal(str)
+
+    def __init__(self, initial: str = WHITE) -> None:
+        super().__init__()
+        self._color: str = initial
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        self._swatch = QPushButton()
+        self._swatch.setFixedSize(36, 28)
+        self._swatch.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._swatch.clicked.connect(self._open_dialog)
+        layout.addWidget(self._swatch)
+
+        for label, hex_value in (("W", WHITE), ("B", BLACK)):
+            btn = QPushButton(label)
+            btn.setFixedWidth(32)
+            btn.setObjectName("nav")
+            btn.clicked.connect(lambda _checked=False, h=hex_value: self._set(h))
+            layout.addWidget(btn)
+
+        self._hex_label = QLabel(self._color)
+        self._hex_label.setStyleSheet("color: #888; font-size: 11px;")
+        layout.addWidget(self._hex_label, stretch=1)
+
+        self._refresh_swatch()
+
+    def value(self) -> str:
+        return self._color
+
+    def set_value(self, hex_color: str) -> None:
+        if hex_color != self._color:
+            self._set(hex_color, emit=False)
+
+    def _set(self, hex_color: str, *, emit: bool = True) -> None:
+        self._color = hex_color
+        self._hex_label.setText(hex_color)
+        self._refresh_swatch()
+        if emit:
+            self.colorChanged.emit(hex_color)
+
+    def _refresh_swatch(self) -> None:
+        border = "#444" if self._color.lower() != "#000000" else "#666"
+        text_rgb = contrast_for(self._color)
+        self._swatch.setStyleSheet(
+            f"background-color: {self._color}; "
+            f"border: 1px solid {border}; "
+            f"border-radius: 4px; "
+            f"color: {rgb_to_hex(text_rgb)};"
+        )
+
+    def _open_dialog(self) -> None:
+        current = QColor(self._color)
+        chosen = QColorDialog.getColor(current, self, "Choose border color")
+        if chosen.isValid():
+            self._set(chosen.name().upper())
 
 
 def _render_font_preview(family: FontFamily, *, size: int = 22) -> QPixmap:
@@ -148,19 +211,13 @@ class ControlsPanel(QScrollArea):
 
         color_row = QHBoxLayout()
         color_row.setContentsMargins(0, 6, 0, 0)
-        color_row.setSpacing(16)
-        color_row.addWidget(QLabel("Color"))
-        self._white = QRadioButton("White")
-        self._black = QRadioButton("Black")
-        self._white.setChecked(self._border.color is BorderColor.WHITE)
-        self._black.setChecked(self._border.color is BorderColor.BLACK)
-        group_btn = QButtonGroup(group)
-        group_btn.addButton(self._white)
-        group_btn.addButton(self._black)
-        self._white.toggled.connect(self._sync)
-        color_row.addWidget(self._white)
-        color_row.addWidget(self._black)
-        color_row.addStretch(1)
+        color_row.setSpacing(10)
+        color_label = QLabel("Color")
+        color_label.setFixedWidth(58)
+        color_row.addWidget(color_label)
+        self._color_picker = _ColorPicker(self._border.color)
+        self._color_picker.colorChanged.connect(self._sync)
+        color_row.addWidget(self._color_picker, stretch=1)
         layout.addLayout(color_row)
 
         return group
@@ -264,7 +321,7 @@ class ControlsPanel(QScrollArea):
             bottom=self._bottom.value(),
             left=self._left.value(),
             right=self._right.value(),
-            color=BorderColor.WHITE if self._white.isChecked() else BorderColor.BLACK,
+            color=self._color_picker.value(),
         )
         self._metadata = MetadataConfig(
             enabled=self._enabled.isChecked(),

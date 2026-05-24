@@ -5,8 +5,8 @@ from typing import Annotated
 import typer
 
 from frame_tool.batch import process_folder
+from frame_tool.colors import WHITE, parse_color
 from frame_tool.models import (
-    BorderColor,
     BorderConfig,
     FontFamily,
     FrameJob,
@@ -50,7 +50,12 @@ def process(
     bottom: Annotated[int, typer.Option(help="Bottom border in pixels.")] = 200,
     left: Annotated[int, typer.Option(help="Left border in pixels.")] = 50,
     right: Annotated[int, typer.Option(help="Right border in pixels.")] = 50,
-    color: Annotated[BorderColor, typer.Option(help="Border color.")] = BorderColor.WHITE,
+    color: Annotated[
+        str,
+        typer.Option(
+            help="Border color: hex (#RRGGBB) or named (white, black, cream, gray, charcoal…).",
+        ),
+    ] = WHITE,
     metadata_position: Annotated[
         MetadataPosition,
         typer.Option("--metadata-position", help="Where to render EXIF metadata."),
@@ -91,10 +96,15 @@ def process(
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
+    try:
+        parsed_color = parse_color(color)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--color") from exc
+
     job = FrameJob(
         input_dir=input_dir,
         output_dir=output or (input_dir / "framed"),
-        border=BorderConfig(top=top, bottom=bottom, left=left, right=right, color=color),
+        border=BorderConfig(top=top, bottom=bottom, left=left, right=right, color=parsed_color),
         metadata=MetadataConfig(
             enabled=not no_metadata,
             position=metadata_position,

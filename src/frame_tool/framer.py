@@ -5,8 +5,8 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from frame_tool.colors import contrast_for, hex_to_rgb
 from frame_tool.models import (
-    BorderColor,
     BorderConfig,
     ExifData,
     FontFamily,
@@ -62,7 +62,7 @@ def _draw_metadata(
     font = _load_font(metadata.font_size, metadata.font)
     draw = ImageDraw.Draw(canvas)
     xy, anchor = _text_anchor_xy(metadata.position, canvas.size, border, metadata.margin)
-    draw.text(xy, text, font=font, fill=border.color.contrast_rgb, anchor=anchor)
+    draw.text(xy, text, font=font, fill=contrast_for(border.color), anchor=anchor)
 
 
 def _pad_to_ratio(
@@ -101,16 +101,14 @@ def _downscale(image: Image.Image, max_long_edge: int) -> Image.Image:
     return image.resize(new_size, Image.Resampling.LANCZOS)
 
 
-def _apply_instagram(
-    image: Image.Image, instagram: InstagramConfig, color: BorderColor
-) -> Image.Image:
+def _apply_instagram(image: Image.Image, instagram: InstagramConfig, color: str) -> Image.Image:
     if instagram.preset is InstagramPreset.NONE:
         return image
     preset = instagram.preset.resolve(image.size)
     ratio = preset.ratio
     if ratio is None:
         return image
-    padded = _pad_to_ratio(image, ratio, color.rgb)
+    padded = _pad_to_ratio(image, ratio, hex_to_rgb(color))
     if instagram.downscale_to is not None:
         padded = _downscale(padded, instagram.downscale_to)
     return padded
@@ -126,7 +124,7 @@ def _frame_image(
     canvas = ImageOps.expand(
         image,
         border=(border.left, border.top, border.right, border.bottom),
-        fill=border.color.rgb,
+        fill=hex_to_rgb(border.color),
     )
     if metadata.enabled:
         _draw_metadata(canvas, border, metadata, exif)

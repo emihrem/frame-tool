@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from frame_tool.colors import BLACK, WHITE
 from frame_tool.models import (
-    BorderColor,
     BorderConfig,
     ExifData,
     FontFamily,
@@ -15,16 +15,6 @@ from frame_tool.models import (
 )
 
 
-class TestBorderColor:
-    def test_white_rgb(self) -> None:
-        assert BorderColor.WHITE.rgb == (255, 255, 255)
-        assert BorderColor.WHITE.contrast_rgb == (0, 0, 0)
-
-    def test_black_rgb(self) -> None:
-        assert BorderColor.BLACK.rgb == (0, 0, 0)
-        assert BorderColor.BLACK.contrast_rgb == (255, 255, 255)
-
-
 class TestBorderConfig:
     def test_defaults(self) -> None:
         cfg = BorderConfig()
@@ -32,7 +22,19 @@ class TestBorderConfig:
         assert cfg.bottom == 200
         assert cfg.left == 50
         assert cfg.right == 50
-        assert cfg.color is BorderColor.WHITE
+        assert cfg.color == WHITE
+
+    def test_accepts_named_color(self) -> None:
+        cfg = BorderConfig(color="cream")
+        assert cfg.color == "#F5F5DC"
+
+    def test_accepts_hex(self) -> None:
+        cfg = BorderConfig(color="#FF8800")
+        assert cfg.color == "#FF8800"
+
+    def test_rejects_garbage(self) -> None:
+        with pytest.raises(ValidationError):
+            BorderConfig(color="rebeccapurple")
 
     def test_negative_rejected(self) -> None:
         with pytest.raises(ValidationError):
@@ -51,9 +53,9 @@ class TestBorderConfig:
         ],
     )
     def test_scaled(self, factor: float, expected: tuple[int, int, int, int]) -> None:
-        scaled = BorderConfig().scaled(factor)
+        scaled = BorderConfig(color=BLACK).scaled(factor)
         assert (scaled.top, scaled.bottom, scaled.left, scaled.right) == expected
-        assert scaled.color is BorderColor.WHITE
+        assert scaled.color == BLACK
 
     def test_scaled_floors_at_zero(self) -> None:
         scaled = BorderConfig(top=1).scaled(0.001)

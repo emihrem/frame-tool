@@ -3,18 +3,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 
-
-class BorderColor(StrEnum):
-    WHITE = "white"
-    BLACK = "black"
-
-    @property
-    def rgb(self) -> tuple[int, int, int]:
-        return (255, 255, 255) if self is BorderColor.WHITE else (0, 0, 0)
-
-    @property
-    def contrast_rgb(self) -> tuple[int, int, int]:
-        return (0, 0, 0) if self is BorderColor.WHITE else (255, 255, 255)
+from frame_tool.colors import WHITE, parse_color
 
 
 class InstagramPreset(StrEnum):
@@ -108,7 +97,12 @@ class BorderConfig(BaseModel):
     bottom: int = Field(default=200, ge=0, le=2000)
     left: int = Field(default=50, ge=0, le=2000)
     right: int = Field(default=50, ge=0, le=2000)
-    color: BorderColor = BorderColor.WHITE
+    color: str = Field(default=WHITE)
+
+    @field_validator("color", mode="before")
+    @classmethod
+    def _normalize_color(cls, value: str) -> str:
+        return parse_color(value)
 
     def scaled(self, factor: float) -> "BorderConfig":
         return BorderConfig(

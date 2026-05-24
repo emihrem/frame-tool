@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from frame_tool.colors import BLACK, WHITE
 from frame_tool.framer import _pad_to_ratio, apply_frame
 from frame_tool.models import (
-    BorderColor,
     BorderConfig,
     ExifData,
     InstagramConfig,
@@ -102,7 +102,7 @@ class TestApplyFrameInstagram:
         apply_frame(
             src,
             dst,
-            BorderConfig(top=0, bottom=0, left=0, right=0, color=BorderColor.WHITE),
+            BorderConfig(top=0, bottom=0, left=0, right=0, color=WHITE),
             MetadataConfig(enabled=False),
             ExifData(),
             InstagramConfig(preset=InstagramPreset.SQUARE),
@@ -197,7 +197,7 @@ class TestApplyFrameInstagram:
         apply_frame(
             src,
             dst,
-            BorderConfig(top=0, bottom=0, left=0, right=0, color=BorderColor.BLACK),
+            BorderConfig(top=0, bottom=0, left=0, right=0, color=BLACK),
             MetadataConfig(enabled=False),
             ExifData(),
             InstagramConfig(preset=InstagramPreset.SQUARE),
