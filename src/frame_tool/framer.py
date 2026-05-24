@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from frame_tool.colors import contrast_for, hex_to_rgb
 from frame_tool.models import (
     BorderConfig,
+    CaptionConfig,
     ExifData,
     FontFamily,
     InstagramConfig,
@@ -65,6 +66,19 @@ def _draw_metadata(
     draw.text(xy, text, font=font, fill=contrast_for(border.color), anchor=anchor)
 
 
+def _draw_caption(
+    canvas: Image.Image,
+    border: BorderConfig,
+    caption: CaptionConfig,
+) -> None:
+    if not caption.text:
+        return
+    font = _load_font(caption.font_size, caption.font)
+    draw = ImageDraw.Draw(canvas)
+    xy, anchor = _text_anchor_xy(caption.position, canvas.size, border, caption.margin)
+    draw.text(xy, caption.text, font=font, fill=contrast_for(border.color), anchor=anchor)
+
+
 def _pad_to_ratio(
     image: Image.Image, target_ratio: float, fill: tuple[int, int, int]
 ) -> Image.Image:
@@ -120,6 +134,7 @@ def _frame_image(
     metadata: MetadataConfig,
     exif: ExifData,
     instagram: InstagramConfig | None = None,
+    caption: CaptionConfig | None = None,
 ) -> Image.Image:
     canvas = ImageOps.expand(
         image,
@@ -128,6 +143,8 @@ def _frame_image(
     )
     if metadata.enabled:
         _draw_metadata(canvas, border, metadata, exif)
+    if caption is not None:
+        _draw_caption(canvas, border, caption)
     if instagram is not None:
         canvas = _apply_instagram(canvas, instagram, border.color)
     return canvas
@@ -140,13 +157,14 @@ def apply_frame(
     metadata: MetadataConfig,
     exif: ExifData,
     instagram: InstagramConfig | None = None,
+    caption: CaptionConfig | None = None,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(image_path) as original:
         original.load()
         exif_bytes = original.info.get("exif")
         icc = original.info.get("icc_profile")
-        framed = _frame_image(original, border, metadata, exif, instagram)
+        framed = _frame_image(original, border, metadata, exif, instagram, caption)
 
     keep_quality = instagram is None or instagram.downscale_to is None
     save_kwargs: dict[str, Any] = {
@@ -178,6 +196,7 @@ def render_preview(
     exif: ExifData,
     max_dim: int = 1400,
     instagram: InstagramConfig | None = None,
+    caption: CaptionConfig | None = None,
 ) -> Image.Image:
     with Image.open(image_path) as original:
         original.load()
@@ -195,9 +214,21 @@ def render_preview(
             "margin": max(0, round(metadata.margin * scale)),
         }
     )
+    scaled_caption = (
+        caption.model_copy(
+            update={
+                "font_size": max(8, round(caption.font_size * scale)),
+                "margin": max(0, round(caption.margin * scale)),
+            }
+        )
+        if caption is not None
+        else None
+    )
     # Don't downscale the preview again to Instagram size — the GUI already
     # works with a thumbnail. Just pad to the target ratio.
     preview_instagram = (
         instagram.model_copy(update={"downscale_to": None}) if instagram is not None else None
     )
-    return _frame_image(thumb, scaled_border, scaled_metadata, exif, preview_instagram)
+    return _frame_image(
+        thumb, scaled_border, scaled_metadata, exif, preview_instagram, scaled_caption
+    )

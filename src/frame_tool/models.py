@@ -150,12 +150,27 @@ class ExifData(BaseModel):
         return cfg.separator.join(parts)
 
 
+class CaptionConfig(BaseModel):
+    """Free-text caption rendered in the border, separate from EXIF.
+
+    An empty ``text`` disables rendering, so this can be added to every
+    job/preset without a separate enabled flag.
+    """
+
+    text: str = ""
+    position: MetadataPosition = MetadataPosition.BOTTOM_LEFT
+    font: FontFamily = FontFamily.MONTSERRAT
+    font_size: int = Field(default=28, ge=8, le=400)
+    margin: int = Field(default=24, ge=0, le=500)
+
+
 class FrameJob(BaseModel):
     input_dir: Path
     output_dir: Path
     border: BorderConfig = Field(default_factory=BorderConfig)
     metadata: MetadataConfig = Field(default_factory=MetadataConfig)
     instagram: InstagramConfig = Field(default_factory=InstagramConfig)
+    caption: CaptionConfig = Field(default_factory=CaptionConfig)
 
     @field_validator("input_dir")
     @classmethod

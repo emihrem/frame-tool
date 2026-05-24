@@ -8,6 +8,7 @@ from frame_tool.batch import process_folder
 from frame_tool.colors import WHITE, parse_color
 from frame_tool.models import (
     BorderConfig,
+    CaptionConfig,
     FontFamily,
     FrameJob,
     InstagramConfig,
@@ -93,6 +94,22 @@ def process(
             help="Downscale long edge to this many pixels (e.g. 1080 for Instagram).",
         ),
     ] = None,
+    caption: Annotated[
+        str,
+        typer.Option(
+            "--caption", help="Free-text caption rendered in the border (e.g. '© 2026 Emi')."
+        ),
+    ] = "",
+    caption_position: Annotated[
+        MetadataPosition,
+        typer.Option("--caption-position", help="Where to render the caption text."),
+    ] = MetadataPosition.BOTTOM_LEFT,
+    caption_font: Annotated[
+        FontFamily, typer.Option("--caption-font", help="Font family for the caption.")
+    ] = FontFamily.MONTSERRAT,
+    caption_font_size: Annotated[
+        int, typer.Option("--caption-font-size", help="Caption font size in pixels.")
+    ] = 28,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -117,6 +134,12 @@ def process(
             show_camera_model=camera_model,
         ),
         instagram=InstagramConfig(preset=instagram, downscale_to=instagram_size),
+        caption=CaptionConfig(
+            text=caption,
+            position=caption_position,
+            font=caption_font,
+            font_size=caption_font_size,
+        ),
     )
 
     def report(current: int, total: int, file: Path) -> None:

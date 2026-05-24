@@ -43,7 +43,7 @@ def process_folder(
         try:
             exif = read_exif(image)
             output = _output_path(image, job.output_dir)
-            apply_frame(image, output, job.border, job.metadata, exif, job.instagram)
+            apply_frame(image, output, job.border, job.metadata, exif, job.instagram, job.caption)
             written.append(output)
         except (OSError, ValueError) as exc:
             logger.warning("Failed to process %s: %s", image, exc)

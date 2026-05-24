@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -21,6 +22,7 @@ from frame_tool.colors import BLACK, WHITE, contrast_for, rgb_to_hex
 from frame_tool.framer import _load_font
 from frame_tool.models import (
     BorderConfig,
+    CaptionConfig,
     FontFamily,
     InstagramConfig,
     InstagramPreset,
@@ -180,6 +182,7 @@ class ControlsPanel(QScrollArea):
         self._border = BorderConfig()
         self._metadata = MetadataConfig()
         self._instagram = InstagramConfig()
+        self._caption = CaptionConfig()
 
         container = QWidget()
         container.setObjectName("sidePanel")
@@ -189,6 +192,7 @@ class ControlsPanel(QScrollArea):
 
         layout.addWidget(self._build_border_group())
         layout.addWidget(self._build_metadata_group())
+        layout.addWidget(self._build_caption_group())
         layout.addWidget(self._build_instagram_group())
         layout.addStretch(1)
 
@@ -282,6 +286,50 @@ class ControlsPanel(QScrollArea):
 
         return group
 
+    def _build_caption_group(self) -> QGroupBox:
+        group = QGroupBox("Caption")
+        layout = QVBoxLayout(group)
+        layout.setSpacing(8)
+
+        self._caption_text = QLineEdit()
+        self._caption_text.setPlaceholderText("Add a caption (e.g. © 2026 Emi Mer)…")
+        self._caption_text.setText(self._caption.text)
+        self._caption_text.textChanged.connect(self._sync)
+        layout.addWidget(self._caption_text)
+
+        position_row = QHBoxLayout()
+        position_row.setSpacing(10)
+        position_row.addWidget(QLabel("Position"))
+        self._caption_position = QComboBox()
+        for pos, label in _POSITION_LABELS.items():
+            self._caption_position.addItem(label, pos)
+        self._caption_position.setCurrentIndex(
+            list(_POSITION_LABELS.keys()).index(self._caption.position)
+        )
+        self._caption_position.currentIndexChanged.connect(self._sync)
+        position_row.addWidget(self._caption_position, stretch=1)
+        layout.addLayout(position_row)
+
+        font_row = QHBoxLayout()
+        font_row.setSpacing(10)
+        font_row.addWidget(QLabel("Font"))
+        self._caption_font = QComboBox()
+        self._caption_font.setIconSize(QSize(180, 28))
+        for family in FontFamily:
+            self._caption_font.addItem(
+                QIcon(_render_font_preview(family)), family.display_name, family
+            )
+        self._caption_font.setCurrentIndex(list(FontFamily).index(self._caption.font))
+        self._caption_font.currentIndexChanged.connect(self._sync)
+        font_row.addWidget(self._caption_font, stretch=1)
+        layout.addLayout(font_row)
+
+        self._caption_size = _SliderField("Size", 8, 200, self._caption.font_size)
+        self._caption_size.valueChanged.connect(self._sync)
+        layout.addWidget(self._caption_size)
+
+        return group
+
     def _build_instagram_group(self) -> QGroupBox:
         group = QGroupBox("Instagram")
         layout = QVBoxLayout(group)
@@ -339,6 +387,13 @@ class ControlsPanel(QScrollArea):
             preset=self._ig_preset.currentData(),
             downscale_to=1080 if self._ig_downscale.isChecked() else None,
         )
+        self._caption = CaptionConfig(
+            text=self._caption_text.text(),
+            position=self._caption_position.currentData(),
+            font=self._caption_font.currentData(),
+            font_size=self._caption_size.value(),
+            margin=self._caption.margin,
+        )
         self.configChanged.emit()
 
     @property
@@ -352,3 +407,7 @@ class ControlsPanel(QScrollArea):
     @property
     def instagram(self) -> InstagramConfig:
         return self._instagram
+
+    @property
+    def caption(self) -> CaptionConfig:
+        return self._caption
