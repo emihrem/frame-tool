@@ -17,6 +17,59 @@ class BorderColor(StrEnum):
         return (0, 0, 0) if self is BorderColor.WHITE else (255, 255, 255)
 
 
+class InstagramPreset(StrEnum):
+    """Aspect ratios accepted by Instagram in 2026.
+
+    ``AUTO`` picks the closest preset based on the original orientation:
+    landscape → landscape 1.91:1, portrait → portrait 4:5, square → 1:1.
+    """
+
+    NONE = "none"
+    SQUARE = "square"
+    PORTRAIT = "portrait"
+    LANDSCAPE = "landscape"
+    STORY = "story"
+    AUTO = "auto"
+
+    @property
+    def ratio(self) -> float | None:
+        """Target width / height, or None for NONE / AUTO."""
+        return {
+            InstagramPreset.SQUARE: 1.0,
+            InstagramPreset.PORTRAIT: 4 / 5,
+            InstagramPreset.LANDSCAPE: 1.91,
+            InstagramPreset.STORY: 9 / 16,
+        }.get(self)
+
+    def resolve(self, image_size: tuple[int, int]) -> "InstagramPreset":
+        """Translate AUTO into a concrete preset for the given image."""
+        if self is not InstagramPreset.AUTO:
+            return self
+        width, height = image_size
+        if width > height:
+            return InstagramPreset.LANDSCAPE
+        if height > width:
+            return InstagramPreset.PORTRAIT
+        return InstagramPreset.SQUARE
+
+
+class InstagramConfig(BaseModel):
+    """Optional second pass that pads the framed image to an Instagram ratio.
+
+    The user-defined border is applied first; this only adds *extra* padding on
+    the two sides needed to reach ``preset.ratio``, in the same colour as the
+    border. The image itself is never cropped or scaled in pixels — original
+    resolution is preserved, and Instagram does its own downscale at upload.
+
+    ``downscale_to`` (when set) resizes the long edge to that many pixels after
+    padding. Use ``1080`` for the exact Instagram canvas; leave ``None`` to
+    keep the source resolution.
+    """
+
+    preset: InstagramPreset = InstagramPreset.NONE
+    downscale_to: int | None = Field(default=None, ge=320, le=8000)
+
+
 class MetadataPosition(StrEnum):
     BOTTOM_CENTER = "bottom-center"
     BOTTOM_LEFT = "bottom-left"
@@ -83,6 +136,7 @@ class FrameJob(BaseModel):
     output_dir: Path
     border: BorderConfig = Field(default_factory=BorderConfig)
     metadata: MetadataConfig = Field(default_factory=MetadataConfig)
+    instagram: InstagramConfig = Field(default_factory=InstagramConfig)
 
     @field_validator("input_dir")
     @classmethod

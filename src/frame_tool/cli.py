@@ -9,6 +9,8 @@ from frame_tool.models import (
     BorderColor,
     BorderConfig,
     FrameJob,
+    InstagramConfig,
+    InstagramPreset,
     MetadataConfig,
     MetadataPosition,
 )
@@ -65,6 +67,23 @@ def process(
     camera_model: Annotated[
         bool, typer.Option("--camera-model", help="Include camera model.")
     ] = False,
+    instagram: Annotated[
+        InstagramPreset,
+        typer.Option(
+            "--instagram",
+            help=(
+                "Pad output to an Instagram-friendly aspect ratio. "
+                "'auto' picks based on each image's orientation."
+            ),
+        ),
+    ] = InstagramPreset.NONE,
+    instagram_size: Annotated[
+        int | None,
+        typer.Option(
+            "--instagram-size",
+            help="Downscale long edge to this many pixels (e.g. 1080 for Instagram).",
+        ),
+    ] = None,
 ) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -82,6 +101,7 @@ def process(
             show_focal_length=focal_length,
             show_camera_model=camera_model,
         ),
+        instagram=InstagramConfig(preset=instagram, downscale_to=instagram_size),
     )
 
     def report(current: int, total: int, file: Path) -> None:

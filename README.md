@@ -9,12 +9,21 @@
 
 Add white or black borders to JPG photos and stamp them with EXIF metadata (aperture, shutter speed, ISO). Cross-platform (macOS / Linux / Windows) with a modern dark GUI and a CLI for batch processing.
 
+## Before · After
+
+| Original from camera | Framed with EXIF |
+|:--:|:--:|
+| <img src="docs/examples/before.jpg" width="420" /> | <img src="docs/examples/after.jpg" width="420" /> |
+
+*Sample photo: NASA / Hubble Pleiades, public domain. Borders, layout, and EXIF text added by `frame_tool` — the original pixels are untouched.*
+
 Built for photographers who edit in Lightroom and want a simple post-export step to add borders + shooting info — without ever touching the underlying JPEG quality.
 
 ## Features
 
 - Independent border per side (top, bottom, left, right), white or black.
 - Optional EXIF overlay with configurable position, size, and fields (f-stop, shutter, ISO, focal length, camera).
+- **Instagram-friendly export**: pad to 1:1, 4:5, 1.91:1, or 9:16 so IG doesn't crop your composition (or `auto` per orientation).
 - Live preview as you tweak settings.
 - Batch export an entire folder with one click (or one CLI command).
 - Original JPEG quality and EXIF metadata preserved on export (`quality="keep"`, `subsampling="keep"`).
@@ -84,9 +93,26 @@ Flags:
 | `--no-metadata` | off | Disable text overlay entirely |
 | `--no-aperture / --no-shutter / --no-iso` | shown | Hide a field |
 | `--focal-length / --camera-model` | hidden | Include a field |
+| `--instagram` | `none` | `none`, `auto`, `square`, `portrait`, `landscape`, `story` |
+| `--instagram-size` | _(off)_ | Downscale long edge to this many px (e.g. `1080`) |
 | `--output / -o` | `<input>/framed` | Output folder |
 
 Output filenames are `<original>_framed.jpg`.
+
+### Instagram example
+
+```bash
+# Pad every image to 4:5 (Instagram portrait) without cropping, keep full resolution
+frame-tool process ./photos --instagram portrait --color white
+
+# Same but downscaled to Instagram's exact 1080 long-edge canvas
+frame-tool process ./photos --instagram portrait --instagram-size 1080
+
+# Let frame_tool pick the best preset based on each image's orientation
+frame-tool process ./photos --instagram auto
+```
+
+The tool **never crops** — it adds extra border in the chosen colour on the two sides needed to reach the target ratio. Instagram does its own downscale on upload; `--instagram-size 1080` only matters if you want the exported file to already match.
 
 ## Build a standalone app (double-click, no terminal)
 

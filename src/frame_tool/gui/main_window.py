@@ -26,6 +26,7 @@ from frame_tool.models import (
     BorderConfig,
     ExifData,
     FrameJob,
+    InstagramConfig,
     MetadataConfig,
 )
 
@@ -44,6 +45,7 @@ class _PreviewWorker(QObject):
         border: BorderConfig,
         metadata: MetadataConfig,
         exif: ExifData,
+        instagram: InstagramConfig,
         max_dim: int,
     ) -> None:
         super().__init__()
@@ -51,6 +53,7 @@ class _PreviewWorker(QObject):
         self._border = border
         self._metadata = metadata
         self._exif = exif
+        self._instagram = instagram
         self._max_dim = max_dim
 
     @Slot()
@@ -62,6 +65,7 @@ class _PreviewWorker(QObject):
                 self._metadata,
                 self._exif,
                 self._max_dim,
+                instagram=self._instagram,
             )
             self.finished.emit(image, self._image_path.name)
         except (OSError, ValueError) as exc:
@@ -283,6 +287,7 @@ class MainWindow(QMainWindow):
             self._controls.border,
             self._controls.metadata,
             exif,
+            self._controls.instagram,
             max_dim=1400,
         )
         worker.moveToThread(thread)
@@ -327,6 +332,7 @@ class MainWindow(QMainWindow):
                 output_dir=output_dir,
                 border=self._controls.border,
                 metadata=self._controls.metadata,
+                instagram=self._controls.instagram,
             )
         except ValueError as exc:
             QMessageBox.critical(self, "Invalid configuration", str(exc))

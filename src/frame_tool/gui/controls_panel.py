@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
 from frame_tool.models import (
     BorderColor,
     BorderConfig,
+    InstagramConfig,
+    InstagramPreset,
     MetadataConfig,
     MetadataPosition,
 )
@@ -28,6 +30,15 @@ _POSITION_LABELS: dict[MetadataPosition, str] = {
     MetadataPosition.TOP_CENTER: "Top · Center",
     MetadataPosition.TOP_LEFT: "Top · Left",
     MetadataPosition.TOP_RIGHT: "Top · Right",
+}
+
+_INSTAGRAM_LABELS: dict[InstagramPreset, str] = {
+    InstagramPreset.NONE: "Off",
+    InstagramPreset.AUTO: "Auto (per orientation)",
+    InstagramPreset.SQUARE: "Square · 1:1",
+    InstagramPreset.PORTRAIT: "Portrait · 4:5",
+    InstagramPreset.LANDSCAPE: "Landscape · 1.91:1",
+    InstagramPreset.STORY: "Story / Reel · 9:16",
 }
 
 
@@ -87,6 +98,7 @@ class ControlsPanel(QScrollArea):
 
         self._border = BorderConfig()
         self._metadata = MetadataConfig()
+        self._instagram = InstagramConfig()
 
         container = QWidget()
         container.setObjectName("sidePanel")
@@ -96,6 +108,7 @@ class ControlsPanel(QScrollArea):
 
         layout.addWidget(self._build_border_group())
         layout.addWidget(self._build_metadata_group())
+        layout.addWidget(self._build_instagram_group())
         layout.addStretch(1)
 
         self.setWidget(container)
@@ -182,6 +195,39 @@ class ControlsPanel(QScrollArea):
 
         return group
 
+    def _build_instagram_group(self) -> QGroupBox:
+        group = QGroupBox("Instagram")
+        layout = QVBoxLayout(group)
+        layout.setSpacing(8)
+
+        preset_row = QHBoxLayout()
+        preset_row.setSpacing(10)
+        preset_row.addWidget(QLabel("Ratio"))
+        self._ig_preset = QComboBox()
+        for preset, label in _INSTAGRAM_LABELS.items():
+            self._ig_preset.addItem(label, preset)
+        self._ig_preset.setCurrentIndex(
+            list(_INSTAGRAM_LABELS.keys()).index(self._instagram.preset)
+        )
+        self._ig_preset.currentIndexChanged.connect(self._sync)
+        preset_row.addWidget(self._ig_preset, stretch=1)
+        layout.addLayout(preset_row)
+
+        self._ig_downscale = QCheckBox("Resize long edge to 1080 px")
+        self._ig_downscale.setChecked(self._instagram.downscale_to is not None)
+        self._ig_downscale.toggled.connect(self._sync)
+        layout.addWidget(self._ig_downscale)
+
+        hint = QLabel(
+            "Pads the framed image with extra border to reach the target "
+            "aspect ratio so Instagram doesn't crop it."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #777; font-size: 11px;")
+        layout.addWidget(hint)
+
+        return group
+
     def _sync(self) -> None:
         self._border = BorderConfig(
             top=self._top.value(),
@@ -201,6 +247,10 @@ class ControlsPanel(QScrollArea):
             show_focal_length=self._focal.isChecked(),
             show_camera_model=self._camera.isChecked(),
         )
+        self._instagram = InstagramConfig(
+            preset=self._ig_preset.currentData(),
+            downscale_to=1080 if self._ig_downscale.isChecked() else None,
+        )
         self.configChanged.emit()
 
     @property
@@ -210,3 +260,7 @@ class ControlsPanel(QScrollArea):
     @property
     def metadata(self) -> MetadataConfig:
         return self._metadata
+
+    @property
+    def instagram(self) -> InstagramConfig:
+        return self._instagram
