@@ -30,39 +30,46 @@ Built for photographers who edit in Lightroom and want a simple post-export step
 - Three typefaces bundled (Montserrat / Inter / Lora) — same look on every OS.
 - Background check for new releases on launch (opt-out with `FRAME_TOOL_NO_UPDATE_CHECK=1`).
 
-## Install (recommended: `uv`)
+## Install
+
+### macOS — pre-built app (no Python required)
+
+Easiest path if you just want to use it.
+
+1. Go to the [latest release](https://github.com/emihrem/frame-tool/releases/latest) and download `frame_tool-<version>-macos-arm64.zip` (Apple Silicon — M1/M2/M3/M4).
+2. Unzip — you'll get `frame_tool.app`.
+3. Drag it to `/Applications`.
+4. **First launch only**: right-click the app → **Open** → **Open** (the build is unsigned so Gatekeeper warns once; after that it opens with a normal double-click).
+
+Currently the published binary is Apple Silicon only. Intel Mac, Windows, and Linux users: use the Python install below or [build locally](#build-a-standalone-app-double-click-no-terminal).
+
+### Any OS — Python install with `uv` (recommended)
+
+If you have [`uv`](https://docs.astral.sh/uv/) installed (`brew install uv` / `pipx install uv` / `pip install uv`):
 
 ```bash
-# Install once, isolated, with auto-managed Python:
-uv tool install --from . frame-tool
-
-# Or, from a git remote later:
-# uv tool install git+https://github.com/<you>/frame-tool
+uv tool install git+https://github.com/emihrem/frame-tool
 ```
 
-Then run from any directory:
+That installs `frame-tool` into an isolated environment with auto-managed Python and exposes the command system-wide. Then from any folder:
 
 ```bash
-frame-tool          # launches GUI
-frame-tool gui      # explicit GUI launch
-frame-tool --help   # CLI help
+frame-tool                 # launches the GUI
+frame-tool process ./fotos # batch CLI
+frame-tool --help          # full help
 ```
 
-### Development setup
+To upgrade later: `uv tool upgrade frame-tool`. To uninstall: `uv tool uninstall frame-tool`.
+
+### Any OS — `pipx` alternative
+
+If you prefer `pipx` over `uv`:
 
 ```bash
-cd frame_tool
-uv venv
-source .venv/bin/activate     # Windows: .venv\Scripts\activate
-uv pip install -e .
-frame-tool
+pipx install git+https://github.com/emihrem/frame-tool
 ```
 
-### Alternative: pipx
-
-```bash
-pipx install .
-```
+> Hacking on the code itself? Skip the install commands above and jump to [Development](#development).
 
 ## GUI usage
 
