@@ -2,7 +2,7 @@ import logging
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QThread, QTimer, QUrl, Signal, SignalInstance, Slot
 from PySide6.QtGui import QCloseEvent, QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
@@ -41,6 +41,24 @@ from frame_tool.updates import OPT_OUT_ENV, UpdateInfo, check_for_update
 logger = logging.getLogger(__name__)
 
 _PREVIEW_DEBOUNCE_MS = 80
+
+
+def _wire_worker_teardown(thread: QThread, worker: QObject, *done_signals: SignalInstance) -> None:
+    """Tear down a worker/thread pair without deleting a QObject cross-thread.
+
+    The worker lives on ``thread``, so it must be deleted from ``thread`` too.
+    We schedule ``worker.deleteLater()`` on each completion signal *before*
+    asking the thread to quit — that posts the DeferredDelete while the worker's
+    own event loop is still running, so Qt processes it on the right thread.
+    Wiring deletion to ``thread.finished`` instead lets the worker's C++ object
+    outlive the loop; Python then GCs the wrapper on the main thread and deletes
+    it directly, corrupting Qt state ("shared QObject was deleted directly" →
+    access violation). The thread deletes itself once fully finished.
+    """
+    for signal in done_signals:
+        signal.connect(worker.deleteLater)
+        signal.connect(thread.quit)
+    thread.finished.connect(thread.deleteLater)
 
 
 class _PreviewWorker(QObject):
@@ -410,9 +428,7 @@ class MainWindow(QMainWindow):
         thread.started.connect(worker.run)
         worker.finished.connect(self._on_preview_ready)
         worker.failed.connect(self._on_preview_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
+        _wire_worker_teardown(thread, worker, worker.finished, worker.failed)
         thread.finished.connect(self._clear_preview_thread)
         self._preview_thread = thread
         self._preview_worker = worker
@@ -470,9 +486,7 @@ class MainWindow(QMainWindow):
         worker.progress.connect(self._on_export_progress)
         worker.finished.connect(self._on_export_finished)
         worker.failed.connect(self._on_export_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
+        _wire_worker_teardown(thread, worker, worker.finished, worker.failed)
         thread.finished.connect(self._clear_export_thread)
         self._export_thread = thread
         self._export_worker = worker
@@ -517,8 +531,7 @@ class MainWindow(QMainWindow):
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.found.connect(self._on_update_found)
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
+        _wire_worker_teardown(thread, worker, worker.finished)
         thread.finished.connect(self._clear_update_thread)
         self._update_thread = thread
         self._update_worker = worker
