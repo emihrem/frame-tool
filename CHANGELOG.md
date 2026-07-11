@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-07-10
+
+### Fixed
+
+- **GUI crash while navigating photos.** Background preview/export/update workers were destroyed on the wrong thread — their `deleteLater()` was tied to `thread.finished`, by which point the worker's event loop had stopped, so Python later freed the C++ object on the main thread and corrupted Qt's per-thread state (`shared QObject was deleted directly` → access violation). Workers are now deleted on their own thread while its loop is still alive.
+
+### Engineering
+
+- Added `PySide6` and `typer` to the mypy pre-commit hook so it type-checks against real Qt/Typer signatures.
+
 ## [0.3.0] — 2026-05-24
 
 ### Added
@@ -39,5 +49,6 @@ First public release.
 - GitHub Actions CI matrix: Linux / macOS / Windows × Python 3.11 / 3.12.
 - Codecov uploads, pre-commit hooks for ruff and mypy.
 
+[0.3.1]: https://github.com/emihrem/frame-tool/releases/tag/v0.3.1
 [0.3.0]: https://github.com/emihrem/frame-tool/releases/tag/v0.3.0
 [0.2.0]: https://github.com/emihrem/frame-tool/releases/tag/v0.2.0

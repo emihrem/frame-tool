@@ -1,6 +1,6 @@
 [project]
 name = "frame-tool"
-version = "0.3.0"
+version = "0.3.1"
 description = "Add white/black borders and EXIF metadata to JPG photos"
 readme = "README.md"
 requires-python = ">=3.11"

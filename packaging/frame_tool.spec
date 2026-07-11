@@ -71,8 +71,8 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "frame_tool",
             "CFBundleDisplayName": "frame_tool",
-            "CFBundleShortVersionString": "0.3.0",
-            "CFBundleVersion": "0.3.0",
+            "CFBundleShortVersionString": "0.3.1",
+            "CFBundleVersion": "0.3.1",
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "10.15.0",
         },
